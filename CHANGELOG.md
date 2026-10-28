@@ -25,4 +25,9 @@
 - 目录重组为 `src/{routes,services,db,util}` + `scripts` + `public/js`
 - PDF 路径改为相对路径（由 sha256 推导），项目目录移动 / 重命名后不再失效
 
+### 文档
+
+- README 明确开源边界：仓库只发布框架，Zotero 环境与 API Key 由使用者自备
+- 新增 `SECURITY.md`：数据存放位置、Key 的处理方式、不要暴露到公网
+
 [0.1.0]: https://github.com/<you>/xisheng-xuanzhai/releases/tag/v0.1.0

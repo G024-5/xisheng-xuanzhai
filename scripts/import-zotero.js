@@ -17,7 +17,12 @@ const ZOT_DB = path.join(ZOT_DIR, 'zotero.sqlite');
 
 if (!fs.existsSync(ZOT_DB)) {
   console.error(`找不到 Zotero 数据库：${ZOT_DB}`);
-  console.error('用法：node scripts/import-zotero.js "C:\\Users\\你\\Zotero"');
+  console.error('');
+  console.error('用法：');
+  console.error('  node scripts/import-zotero.js "C:\\Users\\<你>\\Zotero"');
+  console.error('  ZOTERO_DIR="D:\\Zotero" node scripts/import-zotero.js');
+  console.error('');
+  console.error('路径可以在 Zotero 里查：编辑 → 设置 → 高级 → 文件和文件夹 → 数据目录');
   process.exit(1);
 }
 
