@@ -254,6 +254,8 @@ mark { background: #fff0a8; color: inherit; border-radius: 2px; padding: 0 1px; 
 .btn:disabled { opacity: .55; cursor: default; }
 .btn.ghost { background: #fff; color: #3a3a3c; border-color: var(--line); }
 .btn.ghost:hover { background: var(--hover); }
+.btn.ghost.danger { color: #b3261e; border-color: #e6c7c4; }
+.btn.ghost.danger:hover { background: #fdf1f0; border-color: #d9a8a3; }
 .btn.ghost.off { color: var(--muted); }
 
 /* ---------- 阅读区 ---------- */

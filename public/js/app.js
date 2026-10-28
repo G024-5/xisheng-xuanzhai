@@ -688,6 +688,117 @@ window.addEventListener('drop', (e) => {
   openAddModal(files[0]);
 });
 
+/* ==================== 编辑 / 删除 ==================== */
+
+let editing = null;
+
+function clearDetail() {
+  state.selectedId = null;
+  $('#paperView').hidden = true;
+  $('#empty').hidden = false;
+  history.replaceState(null, '', location.pathname);
+}
+
+function closeEditModal() {
+  $('#editModal').hidden = true;
+}
+
+function editStatus(msg, kind = '') {
+  const el = $('#editStatus');
+  el.hidden = false;
+  el.className = `test-result ${kind}`;
+  el.textContent = msg;
+}
+
+async function openEditModal() {
+  if (!state.selectedId) return;
+  let p;
+  try {
+    p = await api.paper(state.selectedId);
+  } catch (err) {
+    toast(err.message);
+    return;
+  }
+
+  editing = p;
+  $('#eTitle').value = p.title || '';
+  $('#eAuthors').value = (p.authors || []).join(', ');
+  $('#eYear').value = p.year || '';
+  $('#eVenue').value = p.venue || '';
+  $('#editStatus').hidden = true;
+  $('#btnSaveEdit').disabled = false;
+  $('#editModal').hidden = false;
+  $('#eTitle').focus();
+  $('#eTitle').select();
+}
+
+$('#btnEdit').addEventListener('click', openEditModal);
+$('#editClose').addEventListener('click', closeEditModal);
+$('#editModal').addEventListener('click', (e) => { if (e.target.id === 'editModal') closeEditModal(); });
+
+$('#btnSaveEdit').addEventListener('click', async () => {
+  if (!editing) return;
+  const title = $('#eTitle').value.trim();
+  if (!title) {
+    editStatus('标题不能为空', 'err');
+    $('#eTitle').focus();
+    return;
+  }
+
+  $('#btnSaveEdit').disabled = true;
+  editStatus('保存中…');
+  try {
+    await api.updatePaper(editing.id, {
+      title,
+      authors: $('#eAuthors').value,
+      year: $('#eYear').value.trim() || null,
+      venue: $('#eVenue').value.trim(),
+    });
+    closeEditModal();
+    toast('已保存');
+    await loadPapers();
+    await openPaper(editing.id);
+    await refreshAll();
+  } catch (err) {
+    editStatus(`失败：${err.message}`, 'err');
+    $('#btnSaveEdit').disabled = false;
+  }
+});
+
+$('#btnDelete').addEventListener('click', async () => {
+  if (!state.selectedId) return;
+
+  let p;
+  try {
+    p = await api.paper(state.selectedId);
+  } catch (err) {
+    toast(err.message);
+    return;
+  }
+
+  const extras = [];
+  if (p.note?.body) extras.push('1 条笔记');
+  if (p.treeNodes?.length) extras.push(`${p.treeNodes.length} 处知识树挂载`);
+  if (p.has_pdf) extras.push('PDF 文件');
+
+  const ok = confirm(
+    `确定删除《${p.title}》？\n\n` +
+    (extras.length ? `同时移除：${extras.join('、')}\n\n` : '这条没有附带的笔记或文件。\n\n') +
+    '删除后无法撤销。'
+  );
+  if (!ok) return;
+
+  try {
+    const r = await api.deletePaper(p.id);
+    clearDetail();
+    await refreshAll();
+    await loadPapers();
+    toast(r.removed?.files ? '已删除，PDF 文件也已移除' : '已删除');
+  } catch (err) {
+    toast(err.message);
+  }
+});
+
 /* ==================== 键盘 ==================== */
 
 document.addEventListener('keydown', (e) => {
@@ -698,6 +809,7 @@ document.addEventListener('keydown', (e) => {
   }
   if (e.key === 'Escape') {
     if (!$('#addModal').hidden) { closeAddModal(); return; }
+    if (!$('#editModal').hidden) { closeEditModal(); return; }
     if (!$('#settingsModal').hidden) { $('#settingsModal').hidden = true; return; }
     if (!$('#modal').hidden) { $('#modal').hidden = true; return; }
     if (document.body.classList.contains('focus')) setFocus(false);

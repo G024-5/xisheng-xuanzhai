@@ -12,7 +12,7 @@
     <div class="brand">
       <span class="dot"></span>
       <span class="brand-name">溪声轩斋</span>
-      <span class="badge">v0.1.1</span>
+      <span class="badge">v0.1.2</span>
     </div>
     <div class="search-wrap">
       <input id="q" type="search" placeholder="搜索标题、摘要、作者、标签、笔记…（Ctrl+K）" autocomplete="off" spellcheck="false" />
@@ -86,6 +86,9 @@
               </div>
               <button id="btnAi" class="btn">AI 摘要</button>
               <button id="btnAttach" class="btn ghost">挂到知识树</button>
+              <span class="spacer"></span>
+              <button id="btnEdit" class="btn ghost">编辑</button>
+              <button id="btnDelete" class="btn ghost danger">删除</button>
             </div>
             <div id="aiBox" class="ai-box" hidden></div>
           </div>
@@ -166,6 +169,34 @@
         </div>
 
         <div id="addStatus" class="test-result" hidden></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 编辑文献信息 -->
+  <div class="modal" id="editModal" hidden>
+    <div class="modal-card wide">
+      <div class="modal-head"><span>编辑文献信息</span><button class="icon-btn" id="editClose">×</button></div>
+      <div class="modal-body settings">
+        <label for="eTitle">标题</label>
+        <input id="eTitle" type="text" />
+        <label for="eAuthors">作者（逗号分隔）</label>
+        <input id="eAuthors" type="text" />
+        <div class="grid2">
+          <div>
+            <label for="eYear">年份</label>
+            <input id="eYear" type="text" inputmode="numeric" />
+          </div>
+          <div>
+            <label for="eVenue">期刊 / 会议</label>
+            <input id="eVenue" type="text" />
+          </div>
+        </div>
+        <div class="settings-actions">
+          <button id="btnSaveEdit" class="btn">保存</button>
+        </div>
+        <div id="editStatus" class="test-result" hidden></div>
+        <p class="hint">改标题会同时更新查重用的规范化标题。</p>
       </div>
     </div>
   </div>

@@ -5,7 +5,7 @@ const crypto = require('node:crypto');
 const { db, DATA_DIR, STORAGE_DIR } = require('../db');
 const { sendJson, readBody, sendFile } = require('../util/http');
 const { savePdfStream, isPdfFile } = require('../util/upload');
-const { createPaper } = require('../services/ingest');
+const { createPaper, norm } = require('../services/ingest');
 const { parseIdentifier, fetchArxiv, fetchDoi, downloadArxivPdf } = require('../services/metadata');
 
 /** 排序白名单：只允许这几个，避免 SQL 注入 */
@@ -122,12 +122,101 @@ async function detail(req, res, params) {
 
 async function patch(req, res, params) {
   const id = Number(params.id);
-  const body = await readBody(req);
-  if (body.read_state && ['unread', 'reading', 'read'].includes(body.read_state)) {
-    db.prepare("UPDATE papers SET read_state = ?, updated_at = datetime('now') WHERE id = ?")
-      .run(body.read_state, id);
+  if (!db.prepare('SELECT 1 FROM papers WHERE id = ?').get(id)) {
+    return sendJson(res, 404, { error: '文献不存在' });
   }
+
+  const body = await readBody(req);
+  const sets = [];
+  const vals = [];
+
+  if (body.read_state && ['unread', 'reading', 'read'].includes(body.read_state)) {
+    sets.push('read_state = ?');
+    vals.push(body.read_state);
+  }
+
+  if (body.title !== undefined) {
+    const title = String(body.title).trim();
+    if (!title) return sendJson(res, 400, { error: '标题不能为空' });
+    sets.push('title = ?', 'title_norm = ?');
+    vals.push(title, norm(title));
+  }
+
+  if (body.year !== undefined) {
+    const y = body.year === null || body.year === '' ? null : Number(body.year);
+    if (y !== null && (!Number.isInteger(y) || y < 1000 || y > 2999)) {
+      return sendJson(res, 400, { error: '年份看起来不对' });
+    }
+    sets.push('year = ?');
+    vals.push(y);
+  }
+
+  if (body.venue !== undefined) {
+    sets.push('venue = ?');
+    vals.push(String(body.venue).trim() || null);
+  }
+
+  if (sets.length) {
+    sets.push("updated_at = datetime('now')");
+    db.prepare(`UPDATE papers SET ${sets.join(', ')} WHERE id = ?`).run(...vals, id);
+  }
+
+  if (body.authors !== undefined) {
+    const names = (Array.isArray(body.authors) ? body.authors : String(body.authors).split(/[,，;；]/))
+      .map((s) => String(s).trim())
+      .filter(Boolean)
+      .slice(0, 30);
+
+    db.prepare('DELETE FROM paper_authors WHERE paper_id = ?').run(id);
+    names.forEach((name, i) => {
+      db.prepare('INSERT OR IGNORE INTO authors (name) VALUES (?)').run(name);
+      const a = db.prepare('SELECT id FROM authors WHERE name = ?').get(name);
+      if (a) {
+        db.prepare('INSERT OR IGNORE INTO paper_authors (paper_id, author_id, position) VALUES (?, ?, ?)')
+          .run(id, a.id, i);
+      }
+    });
+  }
+
   return sendJson(res, 200, { ok: true });
+}
+
+/** 删除文献：连带笔记、知识树挂载、附件记录；PDF 只在无人引用时删文件 */
+async function remove(req, res, params) {
+  const id = Number(params.id);
+  const paper = db.prepare('SELECT id, title FROM papers WHERE id = ?').get(id);
+  if (!paper) return sendJson(res, 404, { error: '文献不存在' });
+
+  const atts = db.prepare('SELECT sha256, rel_path FROM attachments WHERE paper_id = ?').all(id);
+  const noteCount = db.prepare('SELECT COUNT(*) c FROM notes WHERE paper_id = ?').get(id).c;
+  const treeCount = db.prepare("SELECT COUNT(*) c FROM tree_entries WHERE target_type = 'paper' AND target_id = ?")
+    .get(String(id)).c;
+
+  db.exec('BEGIN');
+  try {
+    db.prepare("DELETE FROM tree_entries WHERE target_type = 'paper' AND target_id = ?").run(String(id));
+    db.prepare('DELETE FROM papers WHERE id = ?').run(id); // 其余靠外键级联
+    db.exec('COMMIT');
+  } catch (err) {
+    db.exec('ROLLBACK');
+    throw err;
+  }
+
+  let files = 0;
+  for (const att of atts) {
+    const stillUsed = db.prepare('SELECT 1 FROM attachments WHERE sha256 = ? LIMIT 1').get(att.sha256);
+    if (stillUsed) continue;
+    const full = path.join(STORAGE_DIR, att.rel_path);
+    if (fs.existsSync(full)) {
+      fs.unlinkSync(full);
+      files++;
+    }
+  }
+
+  return sendJson(res, 200, {
+    ok: true,
+    removed: { notes: noteCount, treeEntries: treeCount, files },
+  });
 }
 
 async function file(req, res, params) {
@@ -254,6 +343,7 @@ module.exports = function register(add) {
   add('GET', '/api/papers', list);
   add('GET', '/api/papers/:id', detail);
   add('PATCH', '/api/papers/:id', patch);
+  add('DELETE', '/api/papers/:id', remove);
   add('GET', '/api/papers/:id/file', file);
   add('POST', '/api/uploads', upload);
   add('POST', '/api/papers', create);

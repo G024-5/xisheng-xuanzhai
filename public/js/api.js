@@ -27,6 +27,8 @@ export const api = {
   papers: (params) => req(`/api/papers${qs(params)}`),
   paper: (id) => req(`/api/papers/${id}`),
   setReadState: (id, readState) => req(`/api/papers/${id}`, { method: 'PATCH', body: { read_state: readState } }),
+  updatePaper: (id, patch) => req(`/api/papers/${id}`, { method: 'PATCH', body: patch }),
+  deletePaper: (id) => req(`/api/papers/${id}`, { method: 'DELETE' }),
   saveNote: (id, noteBody) => req(`/api/papers/${id}/note`, { method: 'PUT', body: { body: noteBody } }),
 
   // 入库：先传文件拿到 uploadId，再带着元数据建条目
