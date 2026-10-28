@@ -1,5 +1,6 @@
 'use strict';
 const fs = require('node:fs');
+const path = require('node:path');
 const crypto = require('node:crypto');
 
 const PDF_MAGIC = Buffer.from('%PDF-');

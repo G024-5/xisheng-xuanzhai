@@ -35,11 +35,11 @@ function parseIdentifier(raw) {
   return null;
 }
 
-async function fetchArxiv(id) {
+async function fetchArxiv(id, timeout = TIMEOUT) {
   const url = `${ARXIV_API}${encodeURIComponent(id)}`;
   let res;
   try {
-    res = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT) });
+    res = await fetch(url, { signal: AbortSignal.timeout(timeout) });
   } catch (e) {
     throw Object.assign(new Error(`连不上 arXiv（${e.message}）`), { status: 502 });
   }

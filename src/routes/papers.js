@@ -6,6 +6,7 @@ const { db, DATA_DIR, STORAGE_DIR } = require('../db');
 const { sendJson, readBody, sendFile } = require('../util/http');
 const { savePdfStream, isPdfFile } = require('../util/upload');
 const { createPaper, norm } = require('../services/ingest');
+const { extractPdfMeta, looksGarbled } = require('../services/pdfmeta');
 const { parseIdentifier, fetchArxiv, fetchDoi, downloadArxivPdf } = require('../services/metadata');
 
 /** 排序白名单：只允许这几个，避免 SQL 注入 */
@@ -260,11 +261,43 @@ async function upload(req, res, _params, url) {
 
   const base = filename.replace(/\.pdf$/i, '').replace(/[_]+/g, ' ').trim();
 
+  // 从 PDF 里猜元数据（只对 40MB 以内的文件做，避免为了几个字读爆内存）
+  let suggest = { title: '', authors: [], arxivId: null, doi: null };
+  if (bytes <= 40 * 1024 * 1024) {
+    try {
+      const meta = extractPdfMeta(fs.readFileSync(tmpFile));
+
+      const rawTitle = meta.infoTitle || meta.xmpTitle || meta.guessTitle || '';
+      const authors = meta.infoAuthor
+        ? meta.infoAuthor.split(/[;,，；]/).map((s) => s.trim()).filter(Boolean)
+        : meta.guessAuthors;
+
+      suggest = {
+        title: looksGarbled(rawTitle) ? '' : rawTitle,
+        authors: authors.filter((a) => !looksGarbled(a)),
+        arxivId: meta.identifiers.arxivId,
+        // 上传时不猜 DOI：正文里引用的 DOI 太容易认错，让用户自己粘
+        doi: null,
+      };
+
+      // 认出了 arXiv 水印就查权威接口，比任何启发式都准
+      if (suggest.arxivId) {
+        try {
+          const exact = await fetchArxiv(suggest.arxivId, 6000);
+          suggest = { title: exact.title, authors: exact.authors, arxivId: suggest.arxivId, doi: exact.doi || null };
+        } catch { /* 网络慢或失败就用本地猜的 */ }
+      }
+    } catch { /* 提取失败不影响上传 */ }
+  }
+
   return sendJson(res, 200, {
     uploadId,
     sha256,
     bytes,
-    suggestedTitle: base.slice(0, 300) || '未命名文献',
+    suggestedTitle: (suggest.title || base).slice(0, 300) || '未命名文献',
+    suggestedAuthors: suggest.authors.slice(0, 20),
+    arxivId: suggest.arxivId,
+    doi: suggest.doi,
   });
 }
 

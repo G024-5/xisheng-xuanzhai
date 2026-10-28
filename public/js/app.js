@@ -572,12 +572,16 @@ async function handleFile(file) {
     $('#dropZone').hidden = true;
     $('#uploadMeta').hidden = false;
     $('#mTitle').value = r.suggestedTitle || '';
-    $('#mAuthors').value = '';
+    $('#mAuthors').value = (r.suggestedAuthors || []).join(', ');
     $('#mYear').value = '';
     $('#mVenue').value = '';
     $('#mTitle').focus();
     $('#mTitle').select();
-    addStatus(`已就绪 · ${(r.bytes / 1048576).toFixed(1)} MB`);
+
+    const bits = [`${(r.bytes / 1048576).toFixed(1)} MB`];
+    if (r.suggestedAuthors?.length) bits.push(`识别到 ${r.suggestedAuthors.length} 位作者`);
+    if (r.arxivId) bits.push(`arXiv ${r.arxivId}`);
+    addStatus(`已就绪 · ${bits.join(' · ')}`);
   } catch (err) {
     addStatus(`上传失败：${err.message}`, 'err');
   }
@@ -631,6 +635,8 @@ $('#btnCreate').addEventListener('click', async () => {
       authors: $('#mAuthors').value,
       year: $('#mYear').value.trim() || null,
       venue: $('#mVenue').value.trim(),
+      arxivId: addState.upload.arxivId || null,
+      doi: addState.upload.doi || null,
     });
     toast(r.deduped ? '这篇已经在库里了' : '已添加到文库');
     await afterAdd(r);
