@@ -67,7 +67,9 @@ const send = async (p, method, body) => {
 
   /* ---------- 设置 ---------- */
   const st = (await get('/api/settings')).body;
-  ok('设置不泄露明文 Key', !JSON.stringify(st).includes('sk-') || !st.ai.hasKey);
+  // 已配置时只能看到掩码，绝不能出现完整 Key
+  const masked = !st.ai.hasKey || (st.ai.keyMasked.includes('••') && st.ai.keyMasked.length <= 20);
+  ok('设置只回显掩码', masked, st.ai.hasKey ? st.ai.keyMasked : '未配置');
   ok('设置含模型', Boolean(st.ai.model));
 
   /* ---------- 知识树 CRUD ---------- */

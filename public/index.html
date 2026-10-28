@@ -59,22 +59,28 @@
       </div>
 
       <div id="paperView" class="paper" hidden>
-        <div class="paper-head">
-          <h1 id="pTitle"></h1>
-          <div class="meta" id="pMeta"></div>
-          <div class="row">
-            <div class="seg" id="stateSeg">
-              <button data-state="unread">未读</button>
-              <button data-state="reading">在读</button>
-              <button data-state="read">已读</button>
+        <div class="paper-head" id="paperHead">
+          <div class="head-top">
+            <h1 id="pTitle"></h1>
+            <div class="head-actions">
+              <button id="btnNotes" class="btn ghost" title="显示 / 隐藏笔记栏">笔记</button>
+              <button id="btnFocus" class="btn ghost" title="专注阅读：隐藏全部边框，只留 PDF（Esc 退出）">专注</button>
+              <button id="btnToggleHead" class="icon-btn head-toggle" title="展开 / 收起文献信息">▾</button>
             </div>
-            <button id="btnAi" class="btn">AI 摘要</button>
-            <button id="btnAttach" class="btn ghost">挂到知识树</button>
-            <span class="spacer"></span>
-            <button id="btnNotes" class="btn ghost" title="显示 / 隐藏笔记栏">笔记</button>
-            <button id="btnFocus" class="btn ghost" title="专注阅读：隐藏左右两栏">专注</button>
           </div>
-          <div id="aiBox" class="ai-box" hidden></div>
+          <div id="headExtra">
+            <div class="meta" id="pMeta"></div>
+            <div class="row">
+              <div class="seg" id="stateSeg">
+                <button data-state="unread">未读</button>
+                <button data-state="reading">在读</button>
+                <button data-state="read">已读</button>
+              </div>
+              <button id="btnAi" class="btn">AI 摘要</button>
+              <button id="btnAttach" class="btn ghost">挂到知识树</button>
+            </div>
+            <div id="aiBox" class="ai-box" hidden></div>
+          </div>
         </div>
 
         <div class="reader" id="reader">

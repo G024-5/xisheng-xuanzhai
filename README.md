@@ -26,7 +26,8 @@ Obsidian 很适合**写**笔记，但不懂文献——没有元数据、没有 
 | 内置 PDF 阅读器（翻页、缩放、文内搜索） | ✅ |
 | 每篇一个笔记面板，自动保存 | ✅ |
 | 知识树：无限层级，一篇文献可挂多个节点 | ✅ |
-| 专注模式、可拖拽分栏 | ✅ |
+| 专注模式：顶栏、列表、标题栏全部收起，PDF 占满窗口 | ✅ |
+| 可拖拽的阅读 / 笔记分栏 | ✅ |
 | AI 摘要（DeepSeek，可在界面里配置 Key） | ✅ |
 | PDF 高亮标注 | 🚧 计划中 |
 | 笔记双向链接 | 🚧 计划中 |
@@ -119,8 +120,8 @@ paperdesk/
 欢迎 issue 和 PR。提交前请跑一遍：
 
 ```bash
-node src/server.js      # 另开一个终端
-node scripts/verify.js  # 应输出全部 PASS
+node scripts/check-dom.js   # 前端 id / import 一致性
+node scripts/verify.js      # 接口端到端（需先启动服务）
 ```
 
 ## 许可

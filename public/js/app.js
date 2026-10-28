@@ -277,7 +277,10 @@ async function openSettings() {
 
 function setFocus(on) {
   document.body.classList.toggle('focus', on);
+  if (!on) document.body.classList.remove('focus-expand');
   $('#exitFocus').hidden = !on;
+  $('#btnFocus').textContent = on ? '退出' : '专注';
+  $('#btnToggleHead').textContent = document.body.classList.contains('focus-expand') ? '▴' : '▾';
 }
 
 function initSplitter() {
@@ -454,7 +457,13 @@ $('#btnNotes').addEventListener('click', () => {
   $('#btnNotes').classList.toggle('off', hidden);
 });
 
-$('#btnFocus').addEventListener('click', () => setFocus(true));
+$('#btnFocus').addEventListener('click', () => {
+  setFocus(!document.body.classList.contains('focus'));
+});
+$('#btnToggleHead').addEventListener('click', () => {
+  const on = document.body.classList.toggle('focus-expand');
+  $('#btnToggleHead').textContent = on ? '▴' : '▾';
+});
 $('#exitFocus').addEventListener('click', () => setFocus(false));
 
 $('#btnSettings').addEventListener('click', openSettings);
