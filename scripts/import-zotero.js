@@ -106,8 +106,8 @@ const zItemToLocal = new Map();
 
 // ---------- 写入 ----------
 const insPaper = db.prepare(`
-  INSERT INTO papers (zotero_key, title, title_norm, abstract, year, venue, doi, url, item_type)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  INSERT INTO papers (zotero_key, title, title_norm, abstract, year, venue, doi, url, item_type, source)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'zotero')
 `);
 const insAuthor = db.prepare('INSERT OR IGNORE INTO authors (name) VALUES (?)');
 const getAuthor = db.prepare('SELECT id FROM authors WHERE name = ?');

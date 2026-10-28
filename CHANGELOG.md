@@ -2,6 +2,22 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/) 与 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [0.1.1] - 2026-10-28
+
+不再依赖 Zotero：可以自己把文献加进来。
+
+### 新增
+
+- 拖拽或选择 PDF 直接入库：流式上传（不占内存）、校验 `%PDF-` 魔数、按 sha256 去重
+- 粘贴 DOI / arXiv 号自动抓取元数据；arXiv 会顺带下载 PDF 并入库
+- 手动填写标题、作者、年份、期刊（作者支持中文逗号分隔）
+- 文献记录来源字段 `source`（manual / upload / doi / arxiv / zotero）
+
+### 变更
+
+- Zotero 从「必需」降级为「可选」：`start.bat` 不再尝试自动导入
+- 空库提示改为引导使用 ＋ 按钮
+
 ## [0.1.0] - 2026-10-28
 
 首个可用版本。

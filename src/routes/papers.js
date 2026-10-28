@@ -1,7 +1,12 @@
 'use strict';
+const fs = require('node:fs');
 const path = require('node:path');
-const { db, STORAGE_DIR } = require('../db');
+const crypto = require('node:crypto');
+const { db, DATA_DIR, STORAGE_DIR } = require('../db');
 const { sendJson, readBody, sendFile } = require('../util/http');
+const { savePdfStream, isPdfFile } = require('../util/upload');
+const { createPaper } = require('../services/ingest');
+const { parseIdentifier, fetchArxiv, fetchDoi, downloadArxivPdf } = require('../services/metadata');
 
 /** 排序白名单：只允许这几个，避免 SQL 注入 */
 const SORTS = {
@@ -133,9 +138,124 @@ async function file(req, res, params) {
   return sendFile(req, res, path.join(STORAGE_DIR, att.rel_path), { type: 'application/pdf', inline: true });
 }
 
+/* ---------------- 入库 ---------------- */
+
+const TMP_DIR = path.join(DATA_DIR, 'tmp');
+const UPLOAD_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.pdf$/;
+
+/** POST /api/uploads —— 裸二进制 PDF，返回 uploadId 供下一步建条目 */
+async function upload(req, res, _params, url) {
+  const rawName = url.searchParams.get('filename') || '';
+  const filename = decodeURIComponent(rawName).slice(0, 200);
+
+  fs.mkdirSync(TMP_DIR, { recursive: true });
+  const uploadId = `${crypto.randomUUID()}.pdf`;
+  const tmpFile = path.join(TMP_DIR, uploadId);
+
+  const { bytes, sha256 } = await savePdfStream(req, tmpFile);
+  if (!bytes) {
+    fs.unlinkSync(tmpFile);
+    return sendJson(res, 400, { error: '没有收到文件内容' });
+  }
+  if (!isPdfFile(tmpFile)) {
+    fs.unlinkSync(tmpFile);
+    return sendJson(res, 400, { error: '这不是一个 PDF 文件' });
+  }
+
+  // 同一份文件已经入过库，直接告诉前端是哪一篇
+  const dup = db.prepare('SELECT paper_id FROM attachments WHERE sha256 = ? LIMIT 1').get(sha256);
+  if (dup) {
+    fs.unlinkSync(tmpFile);
+    return sendJson(res, 200, { duplicate: true, paperId: dup.paper_id, sha256, bytes });
+  }
+
+  const base = filename.replace(/\.pdf$/i, '').replace(/[_]+/g, ' ').trim();
+
+  return sendJson(res, 200, {
+    uploadId,
+    sha256,
+    bytes,
+    suggestedTitle: base.slice(0, 300) || '未命名文献',
+  });
+}
+
+/** POST /api/papers —— 用 uploadId 或纯元数据建条目 */
+async function create(req, res) {
+  const body = await readBody(req);
+
+  let tmpFile = null;
+  if (body.uploadId) {
+    if (!UPLOAD_ID.test(String(body.uploadId))) return sendJson(res, 400, { error: '无效的 uploadId' });
+    tmpFile = path.join(TMP_DIR, body.uploadId);
+    if (!fs.existsSync(tmpFile)) return sendJson(res, 400, { error: '上传已过期，请重新选择文件' });
+  }
+
+  const result = createPaper({
+    title: body.title,
+    abstract: body.abstract,
+    year: body.year,
+    venue: body.venue,
+    doi: body.doi,
+    arxivId: body.arxivId,
+    authors: Array.isArray(body.authors)
+      ? body.authors
+      : String(body.authors || '').split(/[,，;；]/),
+    source: body.uploadId ? 'upload' : 'manual',
+    sha256: body.sha256 || null,
+    tmpFile,
+    size: body.bytes || null,
+    itemType: body.itemType || 'article',
+  });
+
+  return sendJson(res, 200, result);
+}
+
+/** POST /api/papers/import —— 粘贴 DOI / arXiv 自动抓取 */
+async function importByIdentifier(req, res) {
+  const body = await readBody(req);
+  const parsed = parseIdentifier(body.identifier);
+  if (!parsed) {
+    return sendJson(res, 400, {
+      error: '没认出这是 DOI 还是 arXiv 号。示例：10.1038/s41586-020-2649-2 或 2301.12345',
+    });
+  }
+
+  const meta = parsed.type === 'arxiv'
+    ? await fetchArxiv(parsed.id)
+    : await fetchDoi(parsed.id);
+
+  let pdf = null;
+  let tmpFile = null;
+  let sha256 = null;
+
+  if (parsed.type === 'arxiv') {
+    pdf = await downloadArxivPdf(parsed.id);
+    if (pdf) {
+      sha256 = crypto.createHash('sha256').update(pdf).digest('hex');
+      fs.mkdirSync(TMP_DIR, { recursive: true });
+      tmpFile = path.join(TMP_DIR, `${crypto.randomUUID()}.pdf`);
+      fs.writeFileSync(tmpFile, pdf);
+    }
+  }
+
+  const result = createPaper({
+    ...meta,
+    source: parsed.type,
+    sha256,
+    tmpFile,
+    size: pdf ? pdf.length : null,
+    itemType: parsed.type === 'arxiv' ? 'preprint' : 'article',
+  });
+
+  return sendJson(res, 200, { ...result, hasPdf: Boolean(pdf), meta: { title: meta.title, year: meta.year } });
+}
+
 module.exports = function register(add) {
   add('GET', '/api/papers', list);
   add('GET', '/api/papers/:id', detail);
   add('PATCH', '/api/papers/:id', patch);
   add('GET', '/api/papers/:id/file', file);
+  add('POST', '/api/uploads', upload);
+  add('POST', '/api/papers', create);
+  add('POST', '/api/papers/import', importByIdentifier);
 };

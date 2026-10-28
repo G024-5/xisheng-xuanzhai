@@ -29,6 +29,20 @@ export const api = {
   setReadState: (id, readState) => req(`/api/papers/${id}`, { method: 'PATCH', body: { read_state: readState } }),
   saveNote: (id, noteBody) => req(`/api/papers/${id}/note`, { method: 'PUT', body: { body: noteBody } }),
 
+  // 入库：先传文件拿到 uploadId，再带着元数据建条目
+  uploadPdf: async (file) => {
+    const res = await fetch(`/api/uploads?filename=${encodeURIComponent(file.name)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/pdf' },
+      body: file,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    return data;
+  },
+  createPaper: (payload) => req('/api/papers', { method: 'POST', body: payload }),
+  importPaper: (identifier) => req('/api/papers/import', { method: 'POST', body: { identifier } }),
+
   tree: () => req('/api/tree'),
   addNode: (title, parentId = null) => req('/api/tree/nodes', { method: 'POST', body: { title, parentId } }),
   renameNode: (id, title) => req(`/api/tree/nodes/${id}`, { method: 'PATCH', body: { title } }),

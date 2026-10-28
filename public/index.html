@@ -12,7 +12,7 @@
     <div class="brand">
       <span class="dot"></span>
       <span class="brand-name">溪声轩斋</span>
-      <span class="badge">v0.1.0</span>
+      <span class="badge">v0.1.1</span>
     </div>
     <div class="search-wrap">
       <input id="q" type="search" placeholder="搜索标题、摘要、作者、标签、笔记…（Ctrl+K）" autocomplete="off" spellcheck="false" />
@@ -36,7 +36,10 @@
     <section class="list-pane">
       <div class="pane-head">
         <span id="listTitle">全部文献</span>
-        <span id="listCount" class="muted"></span>
+        <span class="head-right">
+          <span id="listCount" class="muted"></span>
+          <button id="btnAdd" class="icon-btn" title="添加文献（也可以直接把 PDF 拖进窗口）">＋</button>
+        </span>
       </div>
       <div class="list-tools">
         <select id="sort" title="排序方式">
@@ -110,6 +113,60 @@
     <div class="modal-card">
       <div class="modal-head"><span>挂到知识树</span><button class="icon-btn" id="modalClose">×</button></div>
       <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <!-- 添加文献 -->
+  <div class="modal" id="addModal" hidden>
+    <div class="modal-card wide">
+      <div class="modal-head"><span>添加文献</span><button class="icon-btn" id="addClose">×</button></div>
+      <div class="modal-body settings">
+        <div class="tabs" id="addTabs">
+          <button class="tab on" data-tab="upload">上传 PDF</button>
+          <button class="tab" data-tab="ident">DOI / arXiv</button>
+        </div>
+
+        <div id="tabUpload">
+          <div class="drop-zone" id="dropZone">
+            <div class="drop-icon">⬆</div>
+            <div>把 PDF 拖进来，或点击选择</div>
+            <div class="hint">也可以直接把文件拖到窗口任意位置</div>
+            <input id="fileInput" type="file" accept="application/pdf,.pdf" hidden />
+          </div>
+          <div id="uploadMeta" hidden>
+            <label for="mTitle">标题</label>
+            <input id="mTitle" type="text" />
+            <label for="mAuthors">作者（逗号分隔）</label>
+            <input id="mAuthors" type="text" placeholder="可留空" />
+            <div class="grid2">
+              <div>
+                <label for="mYear">年份</label>
+                <input id="mYear" type="text" inputmode="numeric" placeholder="2024" />
+              </div>
+              <div>
+                <label for="mVenue">期刊 / 会议</label>
+                <input id="mVenue" type="text" placeholder="可留空" />
+              </div>
+            </div>
+            <div class="settings-actions">
+              <button id="btnCreate" class="btn">添加到文库</button>
+              <button id="btnReselect" class="btn ghost">换一个文件</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="tabIdent" hidden>
+          <label for="identInput">DOI 或 arXiv 号 / 链接</label>
+          <input id="identInput" type="text" spellcheck="false"
+                 placeholder="10.1038/s41586-020-2649-2　或　2301.12345　或　arxiv.org/abs/2301.12345" />
+          <div class="settings-actions">
+            <button id="btnImport" class="btn">抓取并添加</button>
+          </div>
+          <p class="hint">arXiv 会自动下载 PDF；DOI 只抓元数据（PDF 需要自己上传，如果能拿到的话）。</p>
+        </div>
+
+        <div id="addStatus" class="test-result" hidden></div>
+      </div>
     </div>
   </div>
 

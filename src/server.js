@@ -1,7 +1,9 @@
 'use strict';
+const path = require('node:path');
 const { createServer } = require('./app');
 const { db, DATA_DIR } = require('./db');
 const { backup, prune } = require('./db/backup');
+const { cleanupTmp } = require('./util/upload');
 
 const PORT = Number(process.env.PORT || 5178);
 const HOST = process.env.HOST || '127.0.0.1';
@@ -10,6 +12,8 @@ const BACKUP_HOUR = Number(process.env.BACKUP_HOUR || 3);
 const server = createServer();
 server.listen(PORT, HOST, () => {
   console.log(`溪声轩斋 · http://${HOST}:${PORT}`);
+  const cleaned = cleanupTmp(path.join(DATA_DIR, 'tmp'));
+  if (cleaned) console.log(`[清理] ${cleaned} 个未完成的上传`);
   scheduleDailyBackup();
 });
 

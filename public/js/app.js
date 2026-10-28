@@ -120,7 +120,7 @@ function renderList() {
     const msg = state.q
       ? '没有匹配的文献。'
       : state.filter.type === 'all'
-        ? '库里还没有文献。<br>在项目目录运行：<br><code>node scripts/import-zotero.js</code>'
+        ? '库里还没有文献。<br>点左上角 ＋ 上传 PDF，或粘贴 DOI / arXiv 号。<br><span style="font-size:11.5px">也可以从 Zotero 批量导入：<code>node scripts/import-zotero.js</code></span>'
         : '这个分类下还没有文献。';
     box.innerHTML = `<div style="padding:32px 18px;text-align:center;color:var(--muted);font-size:12.5px;line-height:1.9">${msg}</div>`;
     return;
@@ -510,6 +510,186 @@ $('#btnTest').addEventListener('click', async () => {
   }
 });
 
+/* ==================== 添加文献 ==================== */
+
+const addState = { upload: null };
+
+function addStatus(msg, kind = '') {
+  const el = $('#addStatus');
+  el.hidden = false;
+  el.className = `test-result ${kind}`;
+  el.textContent = msg;
+}
+
+function switchAddTab(tab) {
+  document.querySelectorAll('#addTabs .tab').forEach((t) => {
+    t.classList.toggle('on', t.dataset.tab === tab);
+  });
+  $('#tabUpload').hidden = tab !== 'upload';
+  $('#tabIdent').hidden = tab !== 'ident';
+}
+
+function resetAddForm() {
+  addState.upload = null;
+  $('#uploadMeta').hidden = true;
+  $('#dropZone').hidden = false;
+  $('#dropZone').classList.remove('over');
+  $('#fileInput').value = '';
+  $('#identInput').value = '';
+  $('#addStatus').hidden = true;
+  $('#btnCreate').disabled = false;
+  $('#btnImport').disabled = false;
+}
+
+function openAddModal(file) {
+  resetAddForm();
+  switchAddTab('upload');
+  $('#addModal').hidden = false;
+  if (file) handleFile(file);
+}
+
+function closeAddModal() {
+  $('#addModal').hidden = true;
+}
+
+async function handleFile(file) {
+  if (!file) return;
+  if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') {
+    addStatus('只支持 PDF 文件', 'err');
+    return;
+  }
+
+  addStatus(`正在上传 ${file.name}（${(file.size / 1048576).toFixed(1)} MB）…`);
+  try {
+    const r = await api.uploadPdf(file);
+    if (r.duplicate) {
+      addStatus('这份 PDF 已经在库里，正在打开…', 'ok');
+      setTimeout(() => { closeAddModal(); openPaper(r.paperId); }, 400);
+      return;
+    }
+
+    addState.upload = r;
+    $('#dropZone').hidden = true;
+    $('#uploadMeta').hidden = false;
+    $('#mTitle').value = r.suggestedTitle || '';
+    $('#mAuthors').value = '';
+    $('#mYear').value = '';
+    $('#mVenue').value = '';
+    $('#mTitle').focus();
+    $('#mTitle').select();
+    addStatus(`已就绪 · ${(r.bytes / 1048576).toFixed(1)} MB`);
+  } catch (err) {
+    addStatus(`上传失败：${err.message}`, 'err');
+  }
+}
+
+async function afterAdd(result) {
+  closeAddModal();
+  state.filter = { type: 'all', id: null };
+  state.q = '';
+  $('#q').value = '';
+  $('#listTitle').textContent = '全部文献';
+  await refreshAll();
+  await loadPapers();
+  if (result.id) openPaper(result.id);
+}
+
+$('#btnAdd').addEventListener('click', () => openAddModal());
+$('#addClose').addEventListener('click', closeAddModal);
+$('#addModal').addEventListener('click', (e) => { if (e.target.id === 'addModal') closeAddModal(); });
+
+$('#addTabs').addEventListener('click', (e) => {
+  const tab = e.target.closest('.tab');
+  if (tab) switchAddTab(tab.dataset.tab);
+});
+
+$('#dropZone').addEventListener('click', () => $('#fileInput').click());
+$('#fileInput').addEventListener('change', (e) => handleFile(e.target.files?.[0]));
+
+$('#btnReselect').addEventListener('click', () => {
+  resetAddForm();
+  $('#fileInput').click();
+});
+
+$('#btnCreate').addEventListener('click', async () => {
+  if (!addState.upload) return;
+  const title = $('#mTitle').value.trim();
+  if (!title) {
+    addStatus('标题不能为空', 'err');
+    $('#mTitle').focus();
+    return;
+  }
+
+  $('#btnCreate').disabled = true;
+  addStatus('正在入库…');
+  try {
+    const r = await api.createPaper({
+      uploadId: addState.upload.uploadId,
+      sha256: addState.upload.sha256,
+      bytes: addState.upload.bytes,
+      title,
+      authors: $('#mAuthors').value,
+      year: $('#mYear').value.trim() || null,
+      venue: $('#mVenue').value.trim(),
+    });
+    toast(r.deduped ? '这篇已经在库里了' : '已添加到文库');
+    await afterAdd(r);
+  } catch (err) {
+    addStatus(`失败：${err.message}`, 'err');
+    $('#btnCreate').disabled = false;
+  }
+});
+
+$('#btnImport').addEventListener('click', async () => {
+  const ident = $('#identInput').value.trim();
+  if (!ident) {
+    addStatus('先粘贴 DOI 或 arXiv 号', 'err');
+    $('#identInput').focus();
+    return;
+  }
+
+  $('#btnImport').disabled = true;
+  addStatus('正在抓取元数据…');
+  try {
+    const r = await api.importPaper(ident);
+    toast(r.deduped ? '这篇已经在库里了' : (r.hasPdf ? '已添加，含 PDF' : '已添加元数据'));
+    await afterAdd(r);
+  } catch (err) {
+    addStatus(`失败：${err.message}`, 'err');
+    $('#btnImport').disabled = false;
+  }
+});
+
+/* 整个窗口都能接文件 */
+let dragDepth = 0;
+
+window.addEventListener('dragenter', (e) => {
+  if (!e.dataTransfer?.types?.includes('Files')) return;
+  dragDepth++;
+  document.body.classList.add('dragging');
+});
+
+window.addEventListener('dragleave', () => {
+  dragDepth = Math.max(0, dragDepth - 1);
+  if (!dragDepth) document.body.classList.remove('dragging');
+});
+
+window.addEventListener('dragover', (e) => {
+  if (e.dataTransfer?.types?.includes('Files')) e.preventDefault();
+});
+
+window.addEventListener('drop', (e) => {
+  const files = e.dataTransfer?.files;
+  if (!files || !files.length) return;
+  e.preventDefault();
+  dragDepth = 0;
+  document.body.classList.remove('dragging');
+  if (files.length > 1) toast('一次只能导入一个 PDF，先处理第一个', 2400);
+  openAddModal(files[0]);
+});
+
+/* ==================== 键盘 ==================== */
+
 document.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
     e.preventDefault();
@@ -517,6 +697,7 @@ document.addEventListener('keydown', (e) => {
     $('#q').select();
   }
   if (e.key === 'Escape') {
+    if (!$('#addModal').hidden) { closeAddModal(); return; }
     if (!$('#settingsModal').hidden) { $('#settingsModal').hidden = true; return; }
     if (!$('#modal').hidden) { $('#modal').hidden = true; return; }
     if (document.body.classList.contains('focus')) setFocus(false);
