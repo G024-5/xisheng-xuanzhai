@@ -1,7 +1,7 @@
 {
-  "name": "paperdesk",
+  "name": "xisheng-xuanzhai",
   "version": "0.1.0",
-  "description": "文献台 · 单机自用的文献管理与阅读平台（零依赖）",
+  "description": "溪声轩斋 · 单机自用的文献管理与精读工具（零依赖）",
   "private": true,
   "license": "MIT",
   "engines": {
@@ -11,6 +11,7 @@
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "import": "node scripts/import-zotero.js",
+    "backup": "node scripts/backup.js",
     "check": "node scripts/check-dom.js",
     "verify": "node scripts/verify.js"
   },
@@ -20,6 +21,7 @@
     "zotero",
     "pdf",
     "notes",
-    "sqlite"
+    "sqlite",
+    "knowledge-tree"
   ]
 }

@@ -1,9 +1,5 @@
--- 文献台 PaperDesk · 数据库结构
--- SQLite 3.37+，由 src/db/index.js 在启动时执行（幂等）
-
-PRAGMA journal_mode = WAL;
-PRAGMA foreign_keys = ON;
-PRAGMA busy_timeout = 5000;
+-- 001 · 初始结构
+-- 注意：迁移脚本一旦发布就不再修改；结构变更请新增 002_xxx.sql
 
 -- ============ 文献 ============
 CREATE TABLE IF NOT EXISTS papers (
@@ -17,7 +13,7 @@ CREATE TABLE IF NOT EXISTS papers (
   doi         TEXT,
   url         TEXT,
   item_type   TEXT,
-  read_state  TEXT NOT NULL DEFAULT 'unread',   -- unread | reading | read
+  read_state  TEXT NOT NULL DEFAULT 'unread',
   added_at    TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -111,7 +107,7 @@ CREATE TABLE IF NOT EXISTS ai_summaries (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
--- ============ 设置（键值）============
+-- ============ 设置 ============
 CREATE TABLE IF NOT EXISTS settings (
   key        TEXT PRIMARY KEY,
   value      TEXT NOT NULL,

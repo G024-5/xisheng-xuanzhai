@@ -110,7 +110,7 @@ const insPA = db.prepare('INSERT OR IGNORE INTO paper_authors (paper_id, author_
 const insTag = db.prepare('INSERT OR IGNORE INTO tags (name) VALUES (?)');
 const getTag = db.prepare('SELECT id FROM tags WHERE name = ?');
 const insPT = db.prepare('INSERT OR IGNORE INTO paper_tags (paper_id, tag_id) VALUES (?, ?)');
-const insAtt = db.prepare('INSERT OR IGNORE INTO attachments (paper_id, sha256, abs_path, byte_size) VALUES (?, ?, ?, ?)');
+const insAtt = db.prepare('INSERT OR IGNORE INTO attachments (paper_id, sha256, rel_path, byte_size) VALUES (?, ?, ?, ?)');
 
 for (const item of items) {
   const f = fieldsOf.get(item.itemID) || {};
@@ -155,11 +155,12 @@ for (const item of items) {
     try {
       const buf = fs.readFileSync(src);
       const sha = crypto.createHash('sha256').update(buf).digest('hex');
-      const dir = path.join(STORAGE_DIR, sha.slice(0, 2), sha.slice(2, 4));
-      fs.mkdirSync(dir, { recursive: true });
-      const dst = path.join(dir, `${sha}.pdf`);
-      if (!fs.existsSync(dst)) fs.writeFileSync(dst, buf);
-      insAtt.run(paperId, sha, dst, buf.length);
+      const rel = `${sha.slice(0, 2)}/${sha.slice(2, 4)}/${sha}.pdf`;
+      const dst = path.join(STORAGE_DIR, sha.slice(0, 2), sha.slice(2, 4));
+      fs.mkdirSync(dst, { recursive: true });
+      const full = path.join(STORAGE_DIR, rel);
+      if (!fs.existsSync(full)) fs.writeFileSync(full, buf);
+      insAtt.run(paperId, sha, rel, buf.length);
       stat.pdfs++;
       stat.copiedMB += buf.length / 1048576;
       break; // 一篇只取第一个 PDF

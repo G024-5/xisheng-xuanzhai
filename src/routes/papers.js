@@ -1,5 +1,6 @@
 'use strict';
-const { db } = require('../db');
+const path = require('node:path');
+const { db, STORAGE_DIR } = require('../db');
 const { sendJson, readBody, sendFile } = require('../util/http');
 
 /** 排序白名单：只允许这几个，避免 SQL 注入 */
@@ -125,10 +126,11 @@ async function patch(req, res, params) {
 }
 
 async function file(req, res, params) {
-  const att = db.prepare('SELECT abs_path FROM attachments WHERE paper_id = ? ORDER BY id LIMIT 1')
+  const att = db.prepare('SELECT rel_path FROM attachments WHERE paper_id = ? ORDER BY id LIMIT 1')
     .get(Number(params.id));
   if (!att) return sendJson(res, 404, { error: '这篇文献没有 PDF' });
-  return sendFile(req, res, att.abs_path, { type: 'application/pdf', inline: true });
+  // 路径由 sha256 推导，跟着 data/ 走，项目目录改名也不失效
+  return sendFile(req, res, path.join(STORAGE_DIR, att.rel_path), { type: 'application/pdf', inline: true });
 }
 
 module.exports = function register(add) {

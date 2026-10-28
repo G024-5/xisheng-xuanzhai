@@ -4,8 +4,8 @@
   --line: #e5e5ea;
   --text: #1c1c1e;
   --muted: #8a8a8e;
-  --accent: #4f46e5;
-  --accent-soft: #eef0ff;
+  --accent: #0f7a5a;
+  --accent-soft: #e6f4ee;
   --hover: #f2f2f5;
   --radius: 8px;
   --note-w: 380px;
@@ -50,9 +50,19 @@ body { display: flex; flex-direction: column; }
   white-space: nowrap;
 }
 
+/* 斋名用衬线，压一点字距，跟界面其余部分区分开 */
+.brand-name {
+  font-family: "Songti SC", "STSong", "SimSun", "Noto Serif SC", serif;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  margin-right: 1px;
+  color: #17503f;
+}
+
 .brand .dot {
   width: 9px; height: 9px; border-radius: 50%;
-  background: var(--accent);
+  background: linear-gradient(135deg, #17a87d, #0b6b4e);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 

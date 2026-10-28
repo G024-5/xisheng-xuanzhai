@@ -3,8 +3,10 @@ const { db } = require('../db');
 const settings = require('../services/settings');
 const { sendJson } = require('../util/http');
 
+const { version } = require('../../package.json');
+
 async function health(_req, res) {
-  return sendJson(res, 200, { ok: true, version: require('../../package.json').version });
+  return sendJson(res, 200, { ok: true, version });
 }
 
 async function bootstrap(_req, res) {
@@ -23,6 +25,7 @@ async function bootstrap(_req, res) {
     .map((c) => ({ ...c, count: map[c.id] || 0 }));
 
   return sendJson(res, 200, {
+    version,
     stats,
     collections,
     settings: settings.publicView(),
