@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>文献台 PaperDesk</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="dot"></span>文献台<span class="badge">MVP</span></div>
+    <div class="search-wrap">
+      <input id="q" type="search" placeholder="搜索标题、摘要、作者、标签、笔记…（Ctrl+K）" autocomplete="off" spellcheck="false" />
+    </div>
+    <div class="stats" id="stats"></div>
+    <button id="btnSettings" class="icon-btn gear" title="设置">⚙</button>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <div class="pane">
+        <div class="pane-head"><span>分类</span></div>
+        <nav id="collections" class="nav"></nav>
+      </div>
+      <div class="pane grow">
+        <div class="pane-head"><span>知识树</span><button id="addRoot" class="icon-btn" title="新建根节点">＋</button></div>
+        <div id="tree" class="tree"></div>
+      </div>
+    </aside>
+
+    <section class="list-pane">
+      <div class="pane-head">
+        <span id="listTitle">全部文献</span>
+        <span id="listCount" class="muted"></span>
+      </div>
+      <div class="list-tools">
+        <select id="sort" title="排序方式">
+          <option value="added_desc">最近导入</option>
+          <option value="added_asc">最早导入</option>
+          <option value="year_desc">年份 ↓</option>
+          <option value="year_asc">年份 ↑</option>
+          <option value="title_asc">标题 A→Z</option>
+          <option value="title_desc">标题 Z→A</option>
+        </select>
+        <div class="chips" id="chips">
+          <button class="chip on" data-state="">全部</button>
+          <button class="chip" data-state="unread">未读</button>
+          <button class="chip" data-state="reading">在读</button>
+          <button class="chip" data-state="read">已读</button>
+        </div>
+      </div>
+      <div id="list" class="list"></div>
+    </section>
+
+    <section class="detail">
+      <div class="empty" id="empty">
+        <div class="empty-icon">📄</div>
+        <p>从中间选一篇文献</p>
+      </div>
+
+      <div id="paperView" class="paper" hidden>
+        <div class="paper-head">
+          <h1 id="pTitle"></h1>
+          <div class="meta" id="pMeta"></div>
+          <div class="row">
+            <div class="seg" id="stateSeg">
+              <button data-state="unread">未读</button>
+              <button data-state="reading">在读</button>
+              <button data-state="read">已读</button>
+            </div>
+            <button id="btnAi" class="btn">AI 摘要</button>
+            <button id="btnAttach" class="btn ghost">挂到知识树</button>
+            <span class="spacer"></span>
+            <button id="btnNotes" class="btn ghost" title="显示 / 隐藏笔记栏">笔记</button>
+            <button id="btnFocus" class="btn ghost" title="专注阅读：隐藏左右两栏">专注</button>
+          </div>
+          <div id="aiBox" class="ai-box" hidden></div>
+        </div>
+
+        <div class="reader" id="reader">
+          <div class="pdf-box">
+            <div id="pdfEmpty" class="pdf-empty" hidden>这篇没有 PDF 附件</div>
+            <iframe id="pdf" title="PDF 阅读"></iframe>
+          </div>
+          <div class="splitter" id="splitter" title="拖动调整宽度"></div>
+          <div class="note-box">
+            <div class="note-head"><span>笔记</span><span id="noteStatus" class="muted"></span></div>
+            <textarea id="note" placeholder="边读边记…（自动保存）" spellcheck="false"></textarea>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <button id="exitFocus" class="exit-focus" hidden>退出专注 · Esc</button>
+
+  <!-- 通用弹窗（挂到知识树） -->
+  <div class="modal" id="modal" hidden>
+    <div class="modal-card">
+      <div class="modal-head"><span>挂到知识树</span><button class="icon-btn" id="modalClose">×</button></div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <!-- 设置 -->
+  <div class="modal" id="settingsModal" hidden>
+    <div class="modal-card wide">
+      <div class="modal-head"><span>设置</span><button class="icon-btn" id="settingsClose">×</button></div>
+      <div class="modal-body settings">
+        <label for="setKey">DeepSeek API Key</label>
+        <input id="setKey" type="password" autocomplete="off" placeholder="sk-..." />
+        <p class="hint" id="setKeyHint"></p>
+
+        <label for="setModel">模型</label>
+        <select id="setModel">
+          <option value="deepseek-flash">deepseek-flash · 快且便宜（推荐）</option>
+          <option value="deepseek-v4-pro">deepseek-v4-pro · 更强更贵</option>
+        </select>
+
+        <label for="setBase">API Base URL</label>
+        <input id="setBase" type="text" spellcheck="false" />
+
+        <div class="settings-actions">
+          <button id="btnTest" class="btn ghost">测试连接</button>
+          <button id="btnSaveSettings" class="btn">保存</button>
+        </div>
+        <div id="testResult" class="test-result" hidden></div>
+
+        <hr />
+        <p class="hint">
+          Key 只存在本机 <code>data/app.db</code>，不会上传到任何地方。<br />
+          环境变量 <code>DEEPSEEK_API_KEY</code> 优先级更高，可覆盖这里的配置。
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
