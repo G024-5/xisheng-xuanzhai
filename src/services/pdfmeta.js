@@ -405,27 +405,29 @@ function findIdentifiers(lines) {
 
 /* ---------------- 对外 ---------------- */
 
+function isLikelyContentStream(s) {
+  if (!s.includes('BT') || (!s.includes('Tj') && !s.includes('TJ'))) return false;
+  let printable = 0;
+  const sample = Math.min(s.length, 4000);
+  if (!sample) return false;
+  for (let i = 0; i < sample; i++) {
+    const c = s.charCodeAt(i);
+    if (c === 9 || c === 10 || c === 13 || (c >= 32 && c < 127)) printable++;
+  }
+  return printable / sample > 0.75;
+}
+
+function contentStreams(buffer, limit = 60) {
+  return inflateStreams(buffer)
+    .filter(isLikelyContentStream)
+    .slice(0, limit)
+    .map((s) => (s.length > 2_000_000 ? s.slice(0, 2_000_000) : s));
+}
+
 function extractPdfMeta(buffer) {
   const src = buffer.toString('latin1');
 
-  const isLikelyContentStream = (s) => {
-    if (!s.includes('BT') || (!s.includes('Tj') && !s.includes('TJ'))) return false;
-    let printable = 0;
-    const sample = Math.min(s.length, 4000);
-    if (!sample) return false;
-    for (let i = 0; i < sample; i++) {
-      const c = s.charCodeAt(i);
-      if (c === 9 || c === 10 || c === 13 || (c >= 32 && c < 127)) printable++;
-    }
-    return printable / sample > 0.75;
-  };
-
-  const streams = inflateStreams(buffer)
-    .filter(isLikelyContentStream)
-    .slice(0, 60)
-    .map((s) => (s.length > 2_000_000 ? s.slice(0, 2_000_000) : s));
-
-  const pages = streams.map((s) => {
+  const pages = contentStreams(buffer).map((s) => {
     try { return toLines(parseRuns(s)); } catch { return []; }
   });
 
@@ -450,4 +452,43 @@ function extractPdfMeta(buffer) {
   };
 }
 
-module.exports = { extractPdfMeta, findIdentifiers, looksLikeJunk, looksGarbled, cleanText };
+/**
+ * 抽取全文（用于摘要 / 后续全文检索）。
+ * 顺序按内容流在文件里的出现顺序，对双栏排版会左右交错——给模型读够了。
+ */
+function extractFullText(buffer, { maxStreams = 200, maxChars = 120000 } = {}) {
+  const pages = contentStreams(buffer, maxStreams).map((s) => {
+    try { return toLines(parseRuns(s)); } catch { return []; }
+  });
+
+  const seen = new Set();
+  const lines = [];
+  let chars = 0;
+
+  for (const page of pages) {
+    if (page.length < 3) continue; // 水印、单行封面之类
+    for (const line of page) {
+      const t = line.text;
+      if (t.length < 2) continue;
+      const key = t.slice(0, 80); // 页眉页脚重复行
+      if (seen.has(key)) continue;
+      seen.add(key);
+      lines.push(t);
+      chars += t.length + 1;
+      if (chars >= maxChars) break;
+    }
+    if (chars >= maxChars) break;
+  }
+
+  const text = lines.join('\n');
+  return { text, chars: text.length, pages: pages.filter((p) => p.length >= 3).length };
+}
+
+module.exports = {
+  extractPdfMeta,
+  extractFullText,
+  findIdentifiers,
+  looksLikeJunk,
+  looksGarbled,
+  cleanText,
+};

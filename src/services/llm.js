@@ -48,26 +48,40 @@ async function chat(messages, { temperature = 0.3, maxTokens = 800, model, timeo
 }
 
 const SYSTEM_PROMPT = [
-  '你是严谨的学术助手。只依据用户给的标题与摘要作答，不得引入摘要之外的知识，也不要替作者推测。',
+  '你是严谨的学术助手。用户会给出一篇论文的正文（由 PDF 自动抽取，可能有断行、双栏交错或个别乱码）。',
+  '只依据这份正文作答，不得引入外部知识，也不要替作者推测。',
   '用中文输出四行，每行以固定标签开头，不要开场白、不要编号、不要额外总结：',
   '背景：这项研究面对什么问题、在什么背景下提出',
   '方法：用了什么途径、模型、数据或实验设计',
   '结论：得到的主要结果',
-  '局限：作者在文中明确提到的不足或限制；摘要没提到就写「摘要未提及」',
-  '每行不超过 45 字，四行合计不超过 180 字。',
+  '局限：作者在文中明确提到的不足或限制；正文没提到就写「正文未提及」',
+  '每行不超过 50 字，四行合计不超过 200 字。',
 ].join('\n');
 
-async function summarise({ title, abstract, venue, year }) {
-  const input = [
+/** 超长时保留开头和结尾：方法多在前面，局限常写在讨论/结论里 */
+function clipBody(text, maxChars = 60000) {
+  if (text.length <= maxChars) return text;
+  const head = Math.floor(maxChars * 0.7);
+  const tail = maxChars - head;
+  return `${text.slice(0, head)}\n……（中间略去 ${text.length - maxChars} 字）……\n${text.slice(-tail)}`;
+}
+
+async function summarise({ title, abstract, venue, year, body }) {
+  const head = [
     `标题：${title}`,
     venue || year ? `发表：${venue || ''} ${year || ''}`.trim() : '',
-    abstract ? `摘要：${abstract}` : '（该文献没有摘要，仅根据标题作答，并说明信息不足）',
   ].filter(Boolean).join('\n');
 
-  return chat([
+  const user = body
+    ? `${head}\n\n正文：\n${clipBody(body)}`
+    : `${head}\n\n${abstract ? `摘要：${abstract}` : '（没有正文，也没有摘要，仅根据标题作答，并说明信息不足）'}`;
+
+  const r = await chat([
     { role: 'system', content: SYSTEM_PROMPT },
-    { role: 'user', content: input },
+    { role: 'user', content: user },
   ], { maxTokens: 600, thinking: 'disabled' });
+
+  return { ...r, scope: body ? 'fulltext' : 'abstract' };
 }
 
 /** 发一条极小请求验证 Key/网络/模型是否可用 */

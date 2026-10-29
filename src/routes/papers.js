@@ -110,7 +110,7 @@ async function detail(req, res, params) {
   paper.note = db.prepare('SELECT body, updated_at FROM notes WHERE paper_id = ?').get(id)
     || { body: '', updated_at: null };
 
-  paper.summary = db.prepare('SELECT tldr, model, created_at FROM ai_summaries WHERE paper_id = ?').get(id)
+  paper.summary = db.prepare('SELECT tldr, model, scope, created_at FROM ai_summaries WHERE paper_id = ?').get(id)
     || null;
 
   paper.treeNodes = db.prepare(`

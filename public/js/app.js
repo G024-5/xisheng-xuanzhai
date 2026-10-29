@@ -190,8 +190,9 @@ async function openPaper(id) {
   $('#noteStatus').textContent = p.note?.updated_at ? '已保存' : '';
 
   if (p.summary?.tldr) {
+    const scope = p.summary.scope === 'fulltext' ? '全文' : '摘要';
     $('#aiBox').hidden = false;
-    $('#aiBox').innerHTML = `<span class="ai-tag">AI 摘要 · ${esc(p.summary.model || '')}</span>${esc(p.summary.tldr)}`;
+    $('#aiBox').innerHTML = `<span class="ai-tag">AI 摘要 · ${scope} · ${esc(p.summary.model || '')}</span>${esc(p.summary.tldr)}`;
   } else {
     $('#aiBox').hidden = true;
     $('#aiBox').innerHTML = '';
@@ -430,11 +431,12 @@ $('#btnAi').addEventListener('click', async () => {
   btn.disabled = true;
   btn.textContent = '生成中…';
   box.hidden = false;
-  box.innerHTML = '<span class="ai-tag">AI</span>正在阅读摘要…';
+  box.innerHTML = '<span class="ai-tag">AI</span>正在读全文…';
 
   try {
     const r = await api.summarize(state.selectedId);
-    box.innerHTML = `<span class="ai-tag">AI 摘要 · ${esc(r.model)}</span>${esc(r.tldr)}`;
+    const scope = r.scope === 'fulltext' ? '全文' : '摘要';
+    box.innerHTML = `<span class="ai-tag">AI 摘要 · ${scope} · ${esc(r.model)}</span>${esc(r.tldr)}`;
   } catch (err) {
     box.innerHTML = `<span class="ai-tag">AI</span>失败：${esc(err.message)}`;
   } finally {
