@@ -2,6 +2,17 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/) 与 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [0.4.4] - 2026-10-29
+
+修两个上一版引入的布局 bug。
+
+### 修复
+
+- 侧栏收起后阅读区被压成 320px、PDF 缩到角落：折叠时 `.sidebar` 是 `display:none`，
+  不再占网格列，但模板仍写了三列，导致列表挤进 0px 列、详情挤进 320px 列。改为两列 `320px 1fr`。
+- 「删除」按钮变成实心红块、文字看不清：`.btn.danger` 的实心红样式泄漏到了页面上的
+  `btn ghost danger`。改为只作用于 `.dlg-actions` 内的确认按钮。
+
 ## [0.4.3] - 2026-10-29
 
 主界面可以收起左侧栏了。

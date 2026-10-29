@@ -92,9 +92,13 @@ body { display: flex; flex-direction: column; }
   transition: grid-template-columns .18s ease;
 }
 
-/* 侧栏折叠（仅普通模式；专注模式下本来就全隐藏） */
-html.side-collapsed .layout { grid-template-columns: 0 320px 1fr; }
+/* 侧栏折叠（仅普通模式；专注模式下本来就全隐藏）
+   注意：sidebar 是 display:none，不占网格列，
+   所以这里只剩「列表 + 详情」两列，不能再写三列。 */
+html.side-collapsed .layout { grid-template-columns: 320px 1fr; }
 html.side-collapsed .sidebar { display: none; }
+
+.list-pane, .detail { min-width: 0; }
 
 .side-toggle { font-size: 16px; margin-right: -2px; }
 .topbar-btn { height: 26px; padding: 0 10px; font-size: 12px; }
@@ -888,8 +892,9 @@ body.dragging::after {
 .dlg-body { padding: 6px 20px 0; }
 .dlg-text { margin: 0 0 4px; font-size: 13px; line-height: 1.75; color: #4a4f4c; white-space: pre-wrap; }
 .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 18px 20px 18px; }
-.btn.danger { background: #b3261e; border-color: #b3261e; }
-.btn.danger:hover { background: #96170f; border-color: #96170f; }
+/* 只给弹窗里的确认按钮上实心红；页面上的「删除」仍是描边 ghost 样式 */
+.dlg-actions .btn.danger { background: #b3261e; border-color: #b3261e; color: #fff; }
+.dlg-actions .btn.danger:hover { background: #96170f; border-color: #96170f; }
 
 /* 滚动条 */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
