@@ -5,18 +5,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>溪声轩斋</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<!-- 先于样式恢复折叠状态，避免打开瞬间闪一下 -->
+<script>
+  try {
+    if (localStorage.getItem('pd.sideCollapsed') === '1') {
+      document.documentElement.classList.add('side-collapsed');
+    }
+  } catch (e) {}
+</script>
 <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
   <header class="topbar">
+    <button id="btnSide" class="icon-btn side-toggle" title="收起 / 展开侧栏">☰</button>
     <div class="brand">
       <span class="dot"></span>
       <span class="brand-name">溪声轩斋</span>
-      <span class="badge">v0.4.2</span>
+      <span class="badge">v0.4.3</span>
     </div>
     <div class="search-wrap">
       <input id="q" type="search" placeholder="搜索标题、摘要、作者、标签、笔记…（Ctrl+K）" autocomplete="off" spellcheck="false" />
     </div>
+    <button id="btnBoard" class="btn ghost topbar-btn" title="打开文献拼图">拼图</button>
     <div class="stats" id="stats"></div>
     <button id="btnSettings" class="icon-btn gear" title="设置">⚙</button>
   </header>

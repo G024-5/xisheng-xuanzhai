@@ -916,19 +916,32 @@ reader.onToolbarClick(async ({ type, color, sel }) => {
 
 /* ==================== 文献拼图 ==================== */
 
-$('#btnMind').addEventListener('click', async () => {
+async function openBoard() {
   try {
     await board.open({});
   } catch (err) {
     toast(`拼图载入失败：${err.message}`);
     $('#boardOverlay').hidden = true;
   }
-});
+}
+
+$('#btnMind').addEventListener('click', openBoard);
+$('#btnBoard').addEventListener('click', openBoard);
 
 $('#boardClose').addEventListener('click', () => board.close());
 
 board.bindCanvas();
 board.bindToolbar();
+
+/* ==================== 侧栏折叠 ==================== */
+
+$('#btnSide').addEventListener('click', () => {
+  const collapsed = !document.documentElement.classList.contains('side-collapsed');
+  document.documentElement.classList.toggle('side-collapsed', collapsed);
+  try {
+    localStorage.setItem('pd.sideCollapsed', collapsed ? '1' : '0');
+  } catch { /* 隐私模式下忽略 */ }
+});
 
 /* ==================== 键盘 ==================== */
 

@@ -89,7 +89,15 @@ body { display: flex; flex-direction: column; }
   flex: 1; min-height: 0;
   display: grid;
   grid-template-columns: 210px 320px 1fr;
+  transition: grid-template-columns .18s ease;
 }
+
+/* 侧栏折叠（仅普通模式；专注模式下本来就全隐藏） */
+html.side-collapsed .layout { grid-template-columns: 0 320px 1fr; }
+html.side-collapsed .sidebar { display: none; }
+
+.side-toggle { font-size: 16px; margin-right: -2px; }
+.topbar-btn { height: 26px; padding: 0 10px; font-size: 12px; }
 
 .sidebar {
   display: flex; flex-direction: column;
