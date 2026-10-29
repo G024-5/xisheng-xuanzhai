@@ -12,7 +12,7 @@
     <div class="brand">
       <span class="dot"></span>
       <span class="brand-name">溪声轩斋</span>
-      <span class="badge">v0.4.0</span>
+      <span class="badge">v0.4.1</span>
     </div>
     <div class="search-wrap">
       <input id="q" type="search" placeholder="搜索标题、摘要、作者、标签、笔记…（Ctrl+K）" autocomplete="off" spellcheck="false" />
@@ -138,9 +138,9 @@
     <div class="board-head">
       <span class="board-title">文献拼图</span>
       <select id="boardMapSelect" class="board-select" title="切换拼图"></select>
-      <button id="boardNew" class="btn ghost">＋ 拼图</button>
-      <span class="board-tip">拖动卡片摆位 · 点卡片右下圆点再点另一张连线 · 滚轮缩放</span>
+      <button id="boardNew" class="btn ghost board-new">＋ 拼图</button>
       <span class="spacer"></span>
+      <span class="board-hint" title="拖动卡片摆位；点卡片右下圆点，再点另一张卡即可连线；滚轮缩放">?</span>
       <button id="boardAddCard" class="btn">＋ 文献卡</button>
       <button id="boardFit" class="btn ghost">适应</button>
       <button id="boardClose" class="btn ghost">关闭</button>
@@ -151,12 +151,18 @@
           <svg class="board-edges" id="boardEdges"></svg>
         </div>
         <div class="board-empty" id="boardEmpty">
-          <p>还没有卡片</p>
-          <p class="muted">点右上角「＋ 文献卡」，把它拖到想放的位置，<br>再在右侧写下「问题 / 方案 / 局限」。</p>
+          <div class="ghost-card">
+            <span class="ghost-chip"></span>
+            <span class="ghost-line w70"></span>
+            <span class="ghost-line w40"></span>
+            <span class="ghost-line w60"></span>
+          </div>
+          <p>这张拼图还是空的</p>
+          <p class="muted">点右上角「＋ 文献卡」开始，<br>把它拖到想放的位置，再在右侧写下问题 / 方案 / 局限。</p>
         </div>
       </div>
       <aside class="board-side" id="boardSide">
-        <div class="bs-head">编辑</div>
+        <div class="bs-head"><span id="bsTitle">编辑</span></div>
         <div id="boardSideBody" class="bs-body"></div>
       </aside>
     </div>
@@ -282,6 +288,21 @@
           Key 只存在本机 <code>data/app.db</code>，不会上传到任何地方。<br />
           环境变量 <code>DEEPSEEK_API_KEY</code> 优先级更高，可覆盖这里的配置。
         </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 通用确认 / 输入弹窗（替代原生 confirm、prompt） -->
+  <div class="modal" id="dlg" hidden>
+    <div class="modal-card dlg-card">
+      <div class="dlg-head"><span id="dlgTitle">确认</span></div>
+      <div class="dlg-body">
+        <p id="dlgText" class="dlg-text"></p>
+        <input id="dlgInput" class="bs-input" type="text" hidden />
+      </div>
+      <div class="dlg-actions">
+        <button id="dlgCancel" class="btn ghost">取消</button>
+        <button id="dlgOk" class="btn">确定</button>
       </div>
     </div>
   </div>

@@ -1,5 +1,5 @@
 import { api } from './api.js';
-import { $, esc, toast, mark, shortAuthors, debounce } from './ui.js';
+import { $, esc, toast, mark, shortAuthors, debounce, confirmDialog, promptDialog } from './ui.js';
 import * as reader from './reader.js';
 import * as board from './board.js';
 
@@ -341,13 +341,13 @@ $('#tree').addEventListener('click', async (e) => {
   const act = e.target.closest('button')?.dataset.act;
 
   if (act === 'add') {
-    const title = prompt('子节点名称');
+    const title = await promptDialog('新建子节点', { placeholder: '子节点名称', okText: '创建' });
     if (title) await addNode(id, title);
     return;
   }
   if (act === 'rename') {
     const cur = state.tree.nodes.find((n) => n.id === id)?.title || '';
-    const title = prompt('新名称', cur);
+    const title = await promptDialog('重命名节点', { value: cur, okText: '保存' });
     if (title && title !== cur) {
       await api.renameNode(id, title);
       await refreshTree();
@@ -355,7 +355,10 @@ $('#tree').addEventListener('click', async (e) => {
     return;
   }
   if (act === 'del') {
-    if (!confirm('删除这个节点？挂在下面的文献不会被删除。')) return;
+    const yes = await confirmDialog('删除这个节点？挂在下面的文献不会被删除。', {
+      title: '删除节点', okText: '删除', danger: true,
+    });
+    if (!yes) return;
     await api.deleteNode(id);
     if (state.filter.type === 'node' && state.filter.id === id) {
       state.filter = { type: 'all', id: null };
@@ -373,7 +376,10 @@ $('#tree').addEventListener('click', async (e) => {
 });
 
 $('#addRoot').addEventListener('click', async () => {
-  const title = prompt('根节点名称，例如「毕业论文」或「LLM 基础」');
+  const title = await promptDialog('新建根节点', {
+    placeholder: '例如：毕业论文 / LLM 基础',
+    okText: '创建',
+  });
   if (title) await addNode(null, title);
 });
 
@@ -796,10 +802,11 @@ $('#btnDelete').addEventListener('click', async () => {
   if (p.treeNodes?.length) extras.push(`${p.treeNodes.length} 处知识树挂载`);
   if (p.has_pdf) extras.push('PDF 文件');
 
-  const ok = confirm(
-    `确定删除《${p.title}》？\n\n` +
-    (extras.length ? `同时移除：${extras.join('、')}\n\n` : '这条没有附带的笔记或文件。\n\n') +
-    '删除后无法撤销。'
+  const ok = await confirmDialog(
+    `确定删除《${p.title}》？\n` +
+    (extras.length ? `同时移除：${extras.join('、')}。` : '这条没有附带的笔记或文件。') +
+    '\n删除后无法撤销。',
+    { title: '删除文献', okText: '删除', danger: true },
   );
   if (!ok) return;
 

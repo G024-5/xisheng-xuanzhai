@@ -4,7 +4,7 @@
  * 一张拼图 = 若干「文献卡」自由摆放 + 支链分组 + 卡片之间的连线。
  * 卡片内容（问题 / 方案 / 局限）完全由人填写，AI 不参与。
  */
-import { $, esc, toast } from './ui.js';
+import { $, esc, toast, confirmDialog, promptDialog } from './ui.js';
 
 const COLORS = {
   emerald: '#0f7a5a',
@@ -82,9 +82,13 @@ async function refreshMaps() {
 }
 
 async function createMap() {
-  const title = prompt('新拼图的名字', `拼图 ${state.maps.length + 1}`);
+  const title = await promptDialog('新建拼图', {
+    placeholder: '例如：长文本生成综述',
+    value: `拼图 ${state.maps.length + 1}`,
+    okText: '创建',
+  });
   if (title === null) return;
-  const { id } = await req('/api/boards', 'POST', { title: title || '未命名拼图' });
+  const { id } = await req('/api/boards', 'POST', { title });
   state.mapId = id;
   await refreshMaps();
   await loadMap(id);
@@ -132,7 +136,7 @@ function render() {
         <span class="bcard-branch">${esc(branchOf(c)?.name || '未分组')}</span>
         <button class="bcard-x" data-del title="删除卡片">×</button>
       </div>
-      <div class="bcard-title">${esc(c.paper_title || '未关联文献')}</div>
+      <div class="bcard-title ${c.paper_title ? '' : 'empty'}">${esc(c.paper_title || '未选择文献')}</div>
       ${section('问题', c.problem)}
       ${section('方案', c.solution)}
       ${section('局限', c.limitation)}
@@ -189,20 +193,28 @@ function drawEdges() {
 function renderSide() {
   const box = $('#boardSideBody');
   const card = state.cards.find((c) => c.id === state.selected);
+  const titleEl = $('#bsTitle');
 
   if (!card) {
+    if (titleEl) titleEl.textContent = '编辑';
     box.innerHTML = `
-      <p class="bs-hint">选中一张卡片进行编辑。<br>拖动卡片摆位置；点卡片右下角小圆点，再点另一张卡即可连线。</p>
-      <div class="bs-sub">支链</div>
-      ${state.branches.map((b) => `
-        <div class="bs-branch" data-branch="${b.id}">
-          <span class="dot" style="background:${COLORS[b.color] || COLORS.emerald}"></span>
-          <span>${esc(b.name)}</span>
-          <button class="bs-branch-del" data-delbranch="${b.id}" title="删除支链">×</button>
-        </div>`).join('')}
-      <button data-act="add-branch" class="btn ghost" style="width:100%;margin-top:6px">＋ 新建支链</button>`;
+      <p class="bs-hint">选中一张卡片开始编辑。<br>拖动卡片摆位置；点卡片右下角小圆点，再点另一张卡即可连线。</p>
+      <div class="bs-group">
+        <div class="bs-sub">支链</div>
+        ${state.branches.map((b) => `
+          <div class="bs-branch" data-branch="${b.id}">
+            <span class="dot" style="background:${COLORS[b.color] || COLORS.emerald}"></span>
+            <span>${esc(b.name)}</span>
+            <button class="bs-branch-del" data-delbranch="${b.id}" title="删除支链">×</button>
+          </div>`).join('')}
+        <button data-act="add-branch" class="btn ghost" style="width:100%;margin-top:8px">＋ 新建支链</button>
+      </div>`;
     bindBranchList();
     return;
+  }
+
+  if (titleEl) {
+    titleEl.innerHTML = `<span class="bs-title-name">${esc(card.paper_title || '未选择文献')}</span>`;
   }
 
   const branchOptions = state.branches
@@ -214,35 +226,39 @@ function renderSide() {
     .join('');
 
   box.innerHTML = `
-    <label class="bs-label">关联文献</label>
-    <select data-f="paper" class="bs-input">
-      <option value="">（不关联）</option>
-      ${paperOptions}
-    </select>
+    <div class="bs-group">
+      <label class="bs-label">关联文献</label>
+      <select data-f="paper" class="bs-input">
+        <option value="">（不关联）</option>
+        ${paperOptions}
+      </select>
 
-    <label class="bs-label">支链</label>
-    <select data-f="branch" class="bs-input">
-      <option value="">（不分组）</option>
-      ${branchOptions}
-    </select>
+      <label class="bs-label">支链</label>
+      <select data-f="branch" class="bs-input">
+        <option value="">（不分组）</option>
+        ${branchOptions}
+      </select>
 
-    <label class="bs-label">颜色</label>
-    <div class="bs-colors">
-      ${Object.entries(COLORS).map(([k, v]) => `
-        <button class="sw ${card.color === k ? 'on' : ''}" data-color="${k}" style="background:${v}" title="${COLOR_NAMES[k]}"></button>`).join('')}
-      <button class="sw ${card.color ? '' : 'on'}" data-color="" style="background:#fff" title="跟随支链">A</button>
+      <label class="bs-label">颜色</label>
+      <div class="bs-colors">
+        ${Object.entries(COLORS).map(([k, v]) => `
+          <button class="sw ${card.color === k ? 'on' : ''}" data-color="${k}" style="background:${v}" title="${COLOR_NAMES[k]}"></button>`).join('')}
+        <button class="sw ${card.color ? '' : 'on'}" data-color="" style="background:#fff" title="跟随支链">A</button>
+      </div>
     </div>
 
-    <label class="bs-label">解决问题</label>
-    <textarea data-f="problem" class="bs-input" rows="3" placeholder="这篇在解决什么问题">${esc(card.problem || '')}</textarea>
+    <div class="bs-group">
+      <label class="bs-label">解决问题</label>
+      <textarea data-f="problem" class="bs-input" rows="3" placeholder="这篇在解决什么问题">${esc(card.problem || '')}</textarea>
 
-    <label class="bs-label">解决方案</label>
-    <textarea data-f="solution" class="bs-input" rows="3" placeholder="用了什么方法">${esc(card.solution || '')}</textarea>
+      <label class="bs-label">解决方案</label>
+      <textarea data-f="solution" class="bs-input" rows="3" placeholder="用了什么方法">${esc(card.solution || '')}</textarea>
 
-    <label class="bs-label">留下局限</label>
-    <textarea data-f="limitation" class="bs-input" rows="3" placeholder="还有什么没解决">${esc(card.limitation || '')}</textarea>
+      <label class="bs-label">留下局限</label>
+      <textarea data-f="limitation" class="bs-input" rows="3" placeholder="还有什么没解决">${esc(card.limitation || '')}</textarea>
+    </div>
 
-    <button data-act="del-card" class="btn ghost danger" style="width:100%;margin-top:12px">删除这张卡</button>
+    <button data-act="del-card" class="btn ghost danger" style="width:100%">删除这张卡</button>
   `;
   bindCardEditor(card);
 }
@@ -251,7 +267,7 @@ function bindBranchList() {
   const add = $('[data-act="add-branch"]');
   if (add) {
     add.onclick = async () => {
-      const name = prompt('支链名称，例如「检索增强路线」');
+      const name = await promptDialog('新建支链', { placeholder: '例如：检索增强路线', okText: '创建' });
       if (!name) return;
       await req(`/api/boards/${state.mapId}/branches`, 'POST', { name });
       await loadMap(state.mapId);
@@ -261,7 +277,10 @@ function bindBranchList() {
   document.querySelectorAll('[data-delbranch]').forEach((btn) => {
     btn.onclick = async (e) => {
       e.stopPropagation();
-      if (!confirm('删除这个支链？卡片会变成未分组，不会丢。')) return;
+      const yes = await confirmDialog('删除这个支链？卡片会变成「未分组」，不会丢失。', {
+        title: '删除支链', okText: '删除', danger: true,
+      });
+      if (!yes) return;
       await req(`/api/branches/${btn.dataset.delbranch}`, 'DELETE');
       await loadMap(state.mapId);
     };
@@ -284,7 +303,12 @@ function bindCardEditor(card) {
     if ('paper_id' in local) {
       const p = state.papers.find((x) => x.id === local.paper_id);
       const title = el.querySelector('.bcard-title');
-      if (title) title.textContent = p?.title || '未关联文献';
+      if (title) {
+        title.textContent = p?.title || '未选择文献';
+        title.classList.toggle('empty', !p);
+      }
+      const head = document.querySelector('#bsTitle .bs-title-name');
+      if (head) head.textContent = p?.title || '未选择文献';
     }
   };
 
@@ -324,7 +348,10 @@ function bindCardEditor(card) {
   }
 
   $('[data-act="del-card"]').onclick = async () => {
-    if (!confirm('删除这张卡？')) return;
+    const yes = await confirmDialog('删除这张卡？上面的文字会一起消失。', {
+      title: '删除卡片', okText: '删除', danger: true,
+    });
+    if (!yes) return;
     await req(`/api/cards/${card.id}`, 'DELETE');
     state.selected = null;
     await loadMap(state.mapId);
@@ -373,7 +400,10 @@ export function bindCanvas() {
       const move = (ev) => {
         const dx = (ev.clientX - start.x) / state.view.k;
         const dy = (ev.clientY - start.y) / state.view.k;
-        if (Math.abs(dx) + Math.abs(dy) > 2) start.moved = true;
+        if (!start.moved && Math.abs(dx) + Math.abs(dy) > 2) {
+          start.moved = true;
+          cardNode.classList.add('dragging');
+        }
         card.x = Math.round(start.cx + dx);
         card.y = Math.round(start.cy + dy);
         cardNode.style.left = `${card.x}px`;
@@ -383,6 +413,7 @@ export function bindCanvas() {
       const up = () => {
         window.removeEventListener('pointermove', move);
         window.removeEventListener('pointerup', up);
+        cardNode.classList.remove('dragging');
         if (start.moved) queuePatch(card.id, { x: card.x, y: card.y });
       };
       window.addEventListener('pointermove', move);
@@ -426,7 +457,10 @@ export function bindCanvas() {
     const del = e.target.closest('[data-del]');
     if (del) {
       const id = del.closest('.bcard').dataset.id;
-      if (!confirm('删除这张卡？')) return;
+      const yes = await confirmDialog('删除这张卡？上面的文字会一起消失。', {
+        title: '删除卡片', okText: '删除', danger: true,
+      });
+      if (!yes) return;
       await req(`/api/cards/${id}`, 'DELETE');
       state.selected = null;
       await loadMap(state.mapId);
@@ -444,7 +478,8 @@ export function bindCanvas() {
   $('#boardEdges').addEventListener('click', async (e) => {
     const path = e.target.closest('.bedge');
     if (!path) return;
-    if (!confirm('删除这条连线？')) return;
+    const yes = await confirmDialog('删除这条连线？', { title: '删除连线', okText: '删除', danger: true });
+    if (!yes) return;
     await req(`/api/edges/${path.dataset.id}`, 'DELETE');
     state.edges = state.edges.filter((x) => x.id !== path.dataset.id);
     drawEdges();
