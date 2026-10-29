@@ -2,6 +2,21 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/) 与 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [0.2.1] - 2026-10-29
+
+AI 摘要改成四段式，并修掉一个静默失败。
+
+### 变更
+
+- 摘要结构由「问题 / 方法 / 结论」三行改为「**背景 / 方法 / 结论 / 局限**」四行
+- 明确要求：局限只在作者原文提到时才写，摘要没提就写「摘要未提及」
+
+### 修复
+
+- `deepseek-flash` 默认开启思考模式，会把 `max_tokens` 全部消耗在 reasoning 上，
+  导致正文为空、界面显示一段空白。现在摘要任务显式传 `thinking: {type:"disabled"}`
+  （同一篇文献：修复前 completion 600 tokens 全是 reasoning，修复后 59 tokens）
+
 ## [0.2.0] - 2026-10-29
 
 从「能看 PDF」变成「能读 PDF」。
