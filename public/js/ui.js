@@ -77,6 +77,8 @@ export function dialog({ title = '确认', text = '', input = null, okText = '�
     }
 
     d.root.hidden = false;
+    // 内联层级，避免被某个全屏容器的 z-index 盖住
+    d.root.style.zIndex = '1000';
     setTimeout(() => (input ? d.input : d.ok).focus(), 20);
 
     const done = (val) => {

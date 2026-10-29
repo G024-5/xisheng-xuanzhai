@@ -352,9 +352,14 @@ function bindCardEditor(card) {
       title: '删除卡片', okText: '删除', danger: true,
     });
     if (!yes) return;
-    await req(`/api/cards/${card.id}`, 'DELETE');
-    state.selected = null;
-    await loadMap(state.mapId);
+    try {
+      await req(`/api/cards/${card.id}`, 'DELETE');
+      state.selected = null;
+      await loadMap(state.mapId);
+      await refreshMaps();
+    } catch (err) {
+      toast(`删除失败：${err.message}`);
+    }
   };
 }
 
@@ -461,9 +466,14 @@ export function bindCanvas() {
         title: '删除卡片', okText: '删除', danger: true,
       });
       if (!yes) return;
-      await req(`/api/cards/${id}`, 'DELETE');
-      state.selected = null;
-      await loadMap(state.mapId);
+      try {
+        await req(`/api/cards/${id}`, 'DELETE');
+        state.selected = null;
+        await loadMap(state.mapId);
+        await refreshMaps();
+      } catch (err) {
+        toast(`删除失败：${err.message}`);
+      }
       return;
     }
 
@@ -480,9 +490,13 @@ export function bindCanvas() {
     if (!path) return;
     const yes = await confirmDialog('删除这条连线？', { title: '删除连线', okText: '删除', danger: true });
     if (!yes) return;
-    await req(`/api/edges/${path.dataset.id}`, 'DELETE');
-    state.edges = state.edges.filter((x) => x.id !== path.dataset.id);
-    drawEdges();
+    try {
+      await req(`/api/edges/${path.dataset.id}`, 'DELETE');
+      state.edges = state.edges.filter((x) => x.id !== path.dataset.id);
+      drawEdges();
+    } catch (err) {
+      toast(`删除失败：${err.message}`);
+    }
   });
 }
 
