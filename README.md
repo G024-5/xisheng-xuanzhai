@@ -63,6 +63,8 @@ Obsidian 很适合**写**笔记，但不懂文献——没有元数据、没有 
 | 标注列表：按页列摘录，点击跳转，可删除 | ✅ |
 | 每篇一个笔记面板，自动保存 | ✅ |
 | 知识树：无限层级，一篇文献可挂多个节点 | ✅ |
+| 知识树导图：全局视图，改名 / 增删 / 拖动 / 撤销都在图上完成 | ✅ |
+| 三套导图模板：文献综述 / 课题推进 / 单篇精读 | ✅ |
 | 专注模式：顶栏、列表、标题栏全部收起，PDF 占满窗口 | ✅ |
 | 可拖拽的阅读 / 笔记分栏 | ✅ |
 | AI 摘要：读全文，输出「背景 / 方法 / 结论 / 局限」四段（DeepSeek，Key 在界面里配） | ✅ |
@@ -132,12 +134,12 @@ xisheng-xuanzhai/
 │  ├─ index.html
 │  ├─ style.css
 │  ├─ favicon.svg
-│  ├─ js/{api,ui,app,reader}.js
-│  └─ vendor/pdfjs/       pdf.js 4.10.38（Apache-2.0，原样分发）
+│  ├─ js/{api,ui,app,reader,mind}.js
+│  └─ vendor/            pdf.js 4.10.38（Apache-2.0）/ mind-elixir 5.15.1（MIT）
 └─ data/                  app.db + storage/ + backups/（已 gitignore）
 ```
 
-> 仓库里唯一的“二进制”是 `public/vendor/pdfjs/`（约 1.7MB）。为了保持“克隆即用”，它按原样入库，而不是让使用者装 npm 包。
+> 仓库里唯一的“二进制”是 `public/vendor/`（约 1.9MB，两个上游库原样分发）。为了保持“克隆即用”，它们入库而不是让使用者装 npm 包。
 
 ## 数据、备份与升级
 

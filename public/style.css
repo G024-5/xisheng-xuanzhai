@@ -568,6 +568,48 @@ body.dragging::after {
 .ann-item .del:hover { color: #b3261e; }
 .ann-empty { color: var(--muted); font-size: 12px; text-align: center; padding: 28px 12px; line-height: 1.8; }
 
+/* ---------- 知识树导图 ---------- */
+.mind-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+
+  /* 把 mind-elixir 的主题调成祖母绿 */
+  --main-color: #0f7a5a;
+  --main-bgcolor: #ffffff;
+  --main-bgcolor-transparent: rgba(15, 122, 90, .12);
+  --main-border: 1px solid #0f7a5a;
+  --bgcolor: #f7f9f8;
+  --color: #1c1c1e;
+  --selected: #0f7a5a;
+  --root-bgcolor: #0f7a5a;
+  --root-color: #ffffff;
+  --root-border-color: #0b6b4e;
+  --panel-bgcolor: #ffffff;
+  --panel-color: #1c1c1e;
+  --panel-border-color: #e5e5ea;
+  --topic-padding: 6px 10px;
+}
+
+.mind-head {
+  height: 46px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+}
+
+.mind-title { font-size: 13.5px; font-weight: 650; }
+.mind-hint { font-size: 11.5px; color: var(--muted); }
+
+.mind-map { flex: 1; min-height: 0; position: relative; background: #f7f9f8; }
+
 /* 滚动条 */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: #d2d2d7; border-radius: 6px; border: 3px solid transparent; background-clip: content-box; }

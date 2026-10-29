@@ -6,13 +6,14 @@
 <title>溪声轩斋</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="stylesheet" href="/style.css" />
+<link rel="stylesheet" href="/vendor/mind-elixir/MindElixir.css" />
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
       <span class="dot"></span>
       <span class="brand-name">溪声轩斋</span>
-      <span class="badge">v0.2.1</span>
+      <span class="badge">v0.3.0</span>
     </div>
     <div class="search-wrap">
       <input id="q" type="search" placeholder="搜索标题、摘要、作者、标签、笔记…（Ctrl+K）" autocomplete="off" spellcheck="false" />
@@ -28,7 +29,13 @@
         <nav id="collections" class="nav"></nav>
       </div>
       <div class="pane grow">
-        <div class="pane-head"><span>知识树</span><button id="addRoot" class="icon-btn" title="新建根节点">＋</button></div>
+        <div class="pane-head">
+          <span>知识树</span>
+          <span class="head-right">
+            <button id="btnMind" class="icon-btn" title="打开导图（可编辑）">⤢</button>
+            <button id="addRoot" class="icon-btn" title="新建根节点">＋</button>
+          </span>
+        </div>
         <div id="tree" class="tree"></div>
       </div>
     </aside>
@@ -126,6 +133,27 @@
   </main>
 
   <button id="exitFocus" class="exit-focus" hidden>退出专注 · Esc</button>
+
+  <!-- 知识树导图 -->
+  <div class="mind-overlay" id="mindOverlay" hidden>
+    <div class="mind-head">
+      <span class="mind-title">知识树 · 导图</span>
+      <span class="mind-hint">双击改名 · Tab 加子节点 · 回车加同级 · 拖动移动 · 滚轮缩放 · Ctrl+Z 撤销</span>
+      <span class="spacer"></span>
+      <button id="mindTemplate" class="btn ghost">模板</button>
+      <button id="mindFit" class="btn ghost">适应窗口</button>
+      <button id="mindClose" class="btn ghost">关闭</button>
+    </div>
+    <div id="mindMap" class="mind-map"></div>
+  </div>
+
+  <!-- 导图模板 -->
+  <div class="modal" id="tplModal" hidden>
+    <div class="modal-card">
+      <div class="modal-head"><span>从模板新建</span><button class="icon-btn" id="tplClose">×</button></div>
+      <div class="modal-body" id="tplBody"></div>
+    </div>
+  </div>
 
   <!-- 通用弹窗（挂到知识树） -->
   <div class="modal" id="modal" hidden>
