@@ -98,6 +98,28 @@ const send = async (p, method, body) => {
   const restored = (await get('/api/papers/15')).body;
   ok('笔记已还原', restored.note.body === before);
 
+  /* ---------- 标注（建完即删）---------- */
+  const ann = await send('/api/papers/15/annotations', 'POST', {
+    page: 1,
+    quote: '自检用的一句引文',
+    rects: [{ x: 0.1, y: 0.1, w: 0.2, h: 0.02 }],
+    color: 'blue',
+  });
+  ok('创建标注', ann.status === 200 && Boolean(ann.body.id));
+
+  const annList = (await get('/api/papers/15/annotations')).body;
+  ok('标注列表', annList.items.some((a) => a.id === ann.body.id));
+
+  await send(`/api/annotations/${ann.body.id}`, 'DELETE');
+  const annAfter = (await get('/api/papers/15/annotations')).body;
+  ok('删除标注', !annAfter.items.some((a) => a.id === ann.body.id));
+
+  /* ---------- pdf.js 静态资源 ---------- */
+  for (const p of ['/vendor/pdfjs/pdf.min.mjs', '/vendor/pdfjs/pdf.worker.min.mjs']) {
+    const r = await get(p);
+    ok(`静态 ${p}`, r.status === 200);
+  }
+
   /* ---------- 汇总 ---------- */
   console.log(out.join('\n'));
   const fails = out.filter((l) => l.startsWith('FAIL')).length;

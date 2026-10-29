@@ -12,7 +12,7 @@
     <div class="brand">
       <span class="dot"></span>
       <span class="brand-name">溪声轩斋</span>
-      <span class="badge">v0.1.3</span>
+      <span class="badge">v0.2.0</span>
     </div>
     <div class="search-wrap">
       <input id="q" type="search" placeholder="搜索标题、摘要、作者、标签、笔记…（Ctrl+K）" autocomplete="off" spellcheck="false" />
@@ -97,12 +97,28 @@
         <div class="reader" id="reader">
           <div class="pdf-box">
             <div id="pdfEmpty" class="pdf-empty" hidden>这篇没有 PDF 附件</div>
-            <iframe id="pdf" title="PDF 阅读"></iframe>
+            <div id="pdfHost" class="pdf-host"></div>
+            <div class="pdf-bar">
+              <button id="zoomOut" class="pdf-btn" title="缩小">−</button>
+              <span id="zoomLevel" class="pdf-zoom">115%</span>
+              <button id="zoomIn" class="pdf-btn" title="放大">＋</button>
+              <span class="pdf-sep"></span>
+              <span id="pageInfo" class="pdf-pageinfo"></span>
+            </div>
           </div>
           <div class="splitter" id="splitter" title="拖动调整宽度"></div>
           <div class="note-box">
-            <div class="note-head"><span>笔记</span><span id="noteStatus" class="muted"></span></div>
-            <textarea id="note" placeholder="边读边记…（自动保存）" spellcheck="false"></textarea>
+            <div class="note-head">
+              <span class="note-tabs">
+                <button class="ntab on" data-pane="note">笔记</button>
+                <button class="ntab" data-pane="ann">标注 <span id="annCount">0</span></button>
+              </span>
+              <span id="noteStatus" class="muted"></span>
+            </div>
+            <div id="notePane" class="note-pane">
+              <textarea id="note" placeholder="边读边记…（自动保存）" spellcheck="false"></textarea>
+            </div>
+            <div id="annPane" class="ann-pane" hidden></div>
           </div>
         </div>
       </div>

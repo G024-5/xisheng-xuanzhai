@@ -58,7 +58,9 @@ Obsidian 很适合**写**笔记，但不懂文献——没有元数据、没有 
 | 全文搜索：标题 / 摘要 / 作者 / 标签 / 笔记 | ✅ |
 | 六种排序：导入时间、发表年份、标题 | ✅ |
 | 阅读状态过滤：未读 / 在读 / 已读 | ✅ |
-| 内置 PDF 阅读器（翻页、缩放、文内搜索） | ✅ |
+| 内置 pdf.js 阅读器（连续滚动、缩放、文本层可选字） | ✅ |
+| 划词高亮（四色）+ 引用到笔记 | ✅ |
+| 标注列表：按页列摘录，点击跳转，可删除 | ✅ |
 | 每篇一个笔记面板，自动保存 | ✅ |
 | 知识树：无限层级，一篇文献可挂多个节点 | ✅ |
 | 专注模式：顶栏、列表、标题栏全部收起，PDF 占满窗口 | ✅ |
@@ -118,9 +120,9 @@ xisheng-xuanzhai/
 │  │  ├─ migrate.js       迁移执行器（按序、事务、失败回滚）
 │  │  ├─ backup.js        VACUUM INTO 快照 + 轮转清理
 │  │  └─ migrations/      001_init.sql, 002_xxx.sql …
-│  ├─ routes/             papers / notes / tree / settings / ai / meta
-│  ├─ services/           llm / settings
-│  └─ util/http.js        JSON、静态文件、Range 流
+│  ├─ routes/             papers / notes / tree / settings / ai / annotations / meta
+│  ├─ services/           llm / settings / ingest / metadata / pdfmeta
+│  └─ util/               http（JSON、Range 流）/ upload（流式落盘）
 ├─ scripts/
 │  ├─ import-zotero.js    导入器
 │  ├─ backup.js           手动备份
@@ -130,9 +132,12 @@ xisheng-xuanzhai/
 │  ├─ index.html
 │  ├─ style.css
 │  ├─ favicon.svg
-│  └─ js/{api,ui,app}.js
+│  ├─ js/{api,ui,app,reader}.js
+│  └─ vendor/pdfjs/       pdf.js 4.10.38（Apache-2.0，原样分发）
 └─ data/                  app.db + storage/ + backups/（已 gitignore）
 ```
+
+> 仓库里唯一的“二进制”是 `public/vendor/pdfjs/`（约 1.7MB）。为了保持“克隆即用”，它按原样入库，而不是让使用者装 npm 包。
 
 ## 数据、备份与升级
 

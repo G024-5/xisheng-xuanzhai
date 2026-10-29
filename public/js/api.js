@@ -45,6 +45,12 @@ export const api = {
   createPaper: (payload) => req('/api/papers', { method: 'POST', body: payload }),
   importPaper: (identifier) => req('/api/papers/import', { method: 'POST', body: { identifier } }),
 
+  annotations: (paperId) => req(`/api/papers/${paperId}/annotations`),
+  addAnnotation: (paperId, payload) => req(`/api/papers/${paperId}/annotations`, { method: 'POST', body: payload }),
+  updateAnnotation: (id, patch) => req(`/api/annotations/${id}`, { method: 'PATCH', body: patch }),
+  deleteAnnotation: (id) => req(`/api/annotations/${id}`, { method: 'DELETE' }),
+  appendNote: (paperId, text) => req(`/api/papers/${paperId}/note/append`, { method: 'POST', body: { text } }),
+
   tree: () => req('/api/tree'),
   addNode: (title, parentId = null) => req('/api/tree/nodes', { method: 'POST', body: { title, parentId } }),
   renameNode: (id, title) => req(`/api/tree/nodes/${id}`, { method: 'PATCH', body: { title } }),

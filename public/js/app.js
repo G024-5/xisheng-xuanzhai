@@ -1,5 +1,6 @@
 import { api } from './api.js';
 import { $, esc, toast, mark, shortAuthors, debounce } from './ui.js';
+import * as reader from './reader.js';
 
 const state = {
   q: '',
@@ -170,15 +171,19 @@ async function openPaper(id) {
     b.classList.toggle('on', b.dataset.state === p.read_state);
   });
 
-  const pdf = $('#pdf');
   if (p.has_pdf) {
-    pdf.style.display = '';
     $('#pdfEmpty').hidden = true;
-    pdf.src = `/api/papers/${id}/file#toolbar=1&view=FitH`;
+    $('#pdfHost').style.display = '';
+    reader.open(id, $('#pdfHost'), { onPageChange: () => {} })
+      .then((r) => {
+        renderAnnotations(reader.getAnnotations());
+        if (r && r.fallback) toast('pdf.js 载入失败，已回退到内置阅读器', 2600);
+      })
+      .catch((err) => console.error(err));
   } else {
-    pdf.style.display = 'none';
+    reader.close();
+    $('#pdfHost').style.display = 'none';
     $('#pdfEmpty').hidden = false;
-    pdf.src = 'about:blank';
   }
 
   $('#note').value = p.note?.body || '';
@@ -700,6 +705,7 @@ let editing = null;
 
 function clearDetail() {
   state.selectedId = null;
+  reader.close();
   $('#paperView').hidden = true;
   $('#empty').hidden = false;
   history.replaceState(null, '', location.pathname);
@@ -802,6 +808,99 @@ $('#btnDelete').addEventListener('click', async () => {
     toast(r.removed?.files ? '已删除，PDF 文件也已移除' : '已删除');
   } catch (err) {
     toast(err.message);
+  }
+});
+
+/* ==================== 标注 ==================== */
+
+const COLOR_HEX = { yellow: '#ffe066', green: '#9ae6b4', blue: '#a5d8ff', pink: '#ffc9de' };
+
+function switchPane(name) {
+  document.querySelectorAll('.ntab').forEach((b) => b.classList.toggle('on', b.dataset.pane === name));
+  $('#notePane').hidden = name !== 'note';
+  $('#annPane').hidden = name !== 'ann';
+}
+
+function renderAnnotations(list) {
+  const pane = $('#annPane');
+  $('#annCount').textContent = String(list.length);
+
+  if (!list.length) {
+    pane.innerHTML = '<div class="ann-empty">还没有标注。<br>在 PDF 里选中文字，点一个颜色即可高亮。</div>';
+    return;
+  }
+
+  pane.innerHTML = list.map((a) => `
+    <div class="ann-item" data-id="${esc(a.id)}" data-page="${a.page}"
+         style="border-left-color:${COLOR_HEX[a.color] || COLOR_HEX.yellow}">
+      <div class="q">${esc(a.quote)}</div>
+      <div class="m">
+        <span>第 ${a.page} 页</span>
+        <button class="del" data-del="${esc(a.id)}" title="删除这条标注">✕</button>
+      </div>
+    </div>`).join('');
+}
+
+async function refreshAnnotations() {
+  const list = await reader.reloadAnnotations();
+  renderAnnotations(list || []);
+}
+
+$('.note-tabs').addEventListener('click', (e) => {
+  const tab = e.target.closest('.ntab');
+  if (tab) switchPane(tab.dataset.pane);
+});
+
+$('#annPane').addEventListener('click', async (e) => {
+  const del = e.target.closest('[data-del]');
+  if (del) {
+    e.stopPropagation();
+    try {
+      await api.deleteAnnotation(del.dataset.del);
+      await refreshAnnotations();
+    } catch (err) {
+      toast(err.message);
+    }
+    return;
+  }
+  const item = e.target.closest('.ann-item');
+  if (item) reader.jumpToPage(Number(item.dataset.page));
+});
+
+$('#zoomIn').addEventListener('click', () => reader.zoom(0.15).catch(() => {}));
+$('#zoomOut').addEventListener('click', () => reader.zoom(-0.15).catch(() => {}));
+
+reader.onToolbarClick(async ({ type, color, sel }) => {
+  if (!sel || !state.selectedId) return;
+  reader.dismissToolbar();
+
+  if (type === 'highlight') {
+    try {
+      await api.addAnnotation(state.selectedId, {
+        page: sel.page,
+        quote: sel.quote,
+        rects: sel.rects,
+        color,
+      });
+      window.getSelection()?.removeAllRanges();
+      await refreshAnnotations();
+      toast('已高亮');
+    } catch (err) {
+      toast(err.message);
+    }
+    return;
+  }
+
+  if (type === 'quote') {
+    try {
+      const r = await api.appendNote(state.selectedId, `> ${sel.quote}\n\n—— 第 ${sel.page} 页`);
+      $('#note').value = r.body;
+      $('#noteStatus').textContent = '已保存';
+      switchPane('note');
+      toast('已引用到笔记');
+    } catch (err) {
+      toast(err.message);
+    }
   }
 });
 

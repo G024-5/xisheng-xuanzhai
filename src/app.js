@@ -23,6 +23,7 @@ require('./routes/notes')(add);
 require('./routes/tree')(add);
 require('./routes/settings')(add);
 require('./routes/ai')(add);
+require('./routes/annotations')(add);
 
 function match(method, segs) {
   for (const route of routes) {
