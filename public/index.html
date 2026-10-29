@@ -6,14 +6,13 @@
 <title>溪声轩斋</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="stylesheet" href="/style.css" />
-<link rel="stylesheet" href="/vendor/mind-elixir/MindElixir.css" />
 </head>
 <body>
   <header class="topbar">
     <div class="brand">
       <span class="dot"></span>
       <span class="brand-name">溪声轩斋</span>
-      <span class="badge">v0.3.0</span>
+      <span class="badge">v0.4.0</span>
     </div>
     <div class="search-wrap">
       <input id="q" type="search" placeholder="搜索标题、摘要、作者、标签、笔记…（Ctrl+K）" autocomplete="off" spellcheck="false" />
@@ -134,24 +133,32 @@
 
   <button id="exitFocus" class="exit-focus" hidden>退出专注 · Esc</button>
 
-  <!-- 知识树导图 -->
-  <div class="mind-overlay" id="mindOverlay" hidden>
-    <div class="mind-head">
-      <span class="mind-title">知识树 · 导图</span>
-      <span class="mind-hint">双击改名 · Tab 加子节点 · 回车加同级 · 拖动移动 · 滚轮缩放 · Ctrl+Z 撤销</span>
+  <!-- 文献拼图：自由画布 -->
+  <div class="board-overlay" id="boardOverlay" hidden>
+    <div class="board-head">
+      <span class="board-title">文献拼图</span>
+      <select id="boardMapSelect" class="board-select" title="切换拼图"></select>
+      <button id="boardNew" class="btn ghost">＋ 拼图</button>
+      <span class="board-tip">拖动卡片摆位 · 点卡片右下圆点再点另一张连线 · 滚轮缩放</span>
       <span class="spacer"></span>
-      <button id="mindTemplate" class="btn ghost">模板</button>
-      <button id="mindFit" class="btn ghost">适应窗口</button>
-      <button id="mindClose" class="btn ghost">关闭</button>
+      <button id="boardAddCard" class="btn">＋ 文献卡</button>
+      <button id="boardFit" class="btn ghost">适应</button>
+      <button id="boardClose" class="btn ghost">关闭</button>
     </div>
-    <div id="mindMap" class="mind-map"></div>
-  </div>
-
-  <!-- 导图模板 -->
-  <div class="modal" id="tplModal" hidden>
-    <div class="modal-card">
-      <div class="modal-head"><span>从模板新建</span><button class="icon-btn" id="tplClose">×</button></div>
-      <div class="modal-body" id="tplBody"></div>
+    <div class="board-body">
+      <div class="board-canvas" id="boardCanvas">
+        <div class="board-world" id="boardWorld">
+          <svg class="board-edges" id="boardEdges"></svg>
+        </div>
+        <div class="board-empty" id="boardEmpty">
+          <p>还没有卡片</p>
+          <p class="muted">点右上角「＋ 文献卡」，把它拖到想放的位置，<br>再在右侧写下「问题 / 方案 / 局限」。</p>
+        </div>
+      </div>
+      <aside class="board-side" id="boardSide">
+        <div class="bs-head">编辑</div>
+        <div id="boardSideBody" class="bs-body"></div>
+      </aside>
     </div>
   </div>
 

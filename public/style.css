@@ -568,47 +568,229 @@ body.dragging::after {
 .ann-item .del:hover { color: #b3261e; }
 .ann-empty { color: var(--muted); font-size: 12px; text-align: center; padding: 28px 12px; line-height: 1.8; }
 
-/* ---------- 知识树导图 ---------- */
-.mind-overlay {
+/* ---------- 文献拼图（自由画布） ---------- */
+.board-overlay {
   position: fixed;
   inset: 0;
   z-index: 60;
   display: flex;
   flex-direction: column;
-  background: #fff;
-
-  /* 把 mind-elixir 的主题调成祖母绿 */
-  --main-color: #0f7a5a;
-  --main-bgcolor: #ffffff;
-  --main-bgcolor-transparent: rgba(15, 122, 90, .12);
-  --main-border: 1px solid #0f7a5a;
-  --bgcolor: #f7f9f8;
-  --color: #1c1c1e;
-  --selected: #0f7a5a;
-  --root-bgcolor: #0f7a5a;
-  --root-color: #ffffff;
-  --root-border-color: #0b6b4e;
-  --panel-bgcolor: #ffffff;
-  --panel-color: #1c1c1e;
-  --panel-border-color: #e5e5ea;
-  --topic-padding: 6px 10px;
+  background: #f4f6f5;
 }
 
-.mind-head {
+.board-head {
   height: 46px;
   flex: none;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 0 14px;
+  gap: 8px;
+  padding: 0 12px;
   border-bottom: 1px solid var(--line);
   background: #fff;
 }
 
-.mind-title { font-size: 13.5px; font-weight: 650; }
-.mind-hint { font-size: 11.5px; color: var(--muted); }
+.board-title { font-size: 13.5px; font-weight: 650; margin-right: 4px; }
 
-.mind-map { flex: 1; min-height: 0; position: relative; background: #f7f9f8; }
+.board-select {
+  height: 28px;
+  max-width: 200px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+.board-tip { font-size: 11.5px; color: var(--muted); margin-left: 6px; }
+
+.board-body { flex: 1; min-height: 0; display: flex; }
+
+.board-canvas {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  cursor: grab;
+  background-color: #f4f6f5;
+  background-image: radial-gradient(#d7ded9 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+.board-canvas:active { cursor: grabbing; }
+
+.board-world { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+
+.board-edges {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 12000px;
+  height: 12000px;
+  overflow: visible;
+  pointer-events: none;
+}
+.board-edges .bedge {
+  fill: none;
+  stroke: #9aa5a1;
+  stroke-width: 2;
+  pointer-events: stroke;
+  cursor: pointer;
+}
+.board-edges .bedge:hover { stroke: var(--accent); stroke-width: 3; }
+
+.board-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 13px;
+  pointer-events: none;
+}
+.board-empty p { margin: 0; }
+.board-empty .muted { font-size: 12px; line-height: 1.9; text-align: center; }
+
+/* 卡片 */
+.bcard {
+  position: absolute;
+  width: 240px;
+  box-sizing: border-box;
+  padding: 8px 12px 12px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--c);
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .07);
+  cursor: grab;
+  user-select: none;
+}
+.bcard.sel { box-shadow: 0 0 0 2px var(--c), 0 8px 22px rgba(0, 0, 0, .14); }
+.bcard.linking { outline: 2px dashed var(--c); outline-offset: 2px; }
+
+.bcard-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+
+.bcard-branch {
+  font-size: 10.5px;
+  color: var(--c);
+  background: #eef2f0;
+  padding: 1px 6px;
+  border-radius: 999px;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bcard-x {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.bcard-title {
+  margin: 6px 0 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.bcard-sec { margin-top: 6px; }
+.bcard-sec i { font-style: normal; font-size: 10.5px; color: var(--muted); display: block; }
+.bcard-sec p {
+  margin: 1px 0 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #2c2c2e;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.bcard-sec p.empty { color: #c4c4c8; }
+
+.bcard-port {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--c);
+  cursor: crosshair;
+}
+
+/* 侧栏编辑器 */
+.board-side {
+  width: 284px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: #fff;
+  border-left: 1px solid var(--line);
+}
+
+.bs-head {
+  height: 34px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .7px;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+}
+
+.bs-body { flex: 1; overflow-y: auto; padding: 12px; }
+
+.bs-hint { margin: 0 0 14px; font-size: 12px; line-height: 1.9; color: var(--muted); }
+
+.bs-label { display: block; margin: 10px 0 4px; font-size: 11px; color: var(--muted); }
+
+.bs-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: 12.5px/1.5 inherit;
+  color: var(--text);
+  background: #fff;
+  outline: none;
+  resize: vertical;
+}
+.bs-input:focus { border-color: var(--accent); }
+
+.bs-colors { display: flex; gap: 6px; flex-wrap: wrap; }
+.bs-colors .sw {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid rgba(0, 0, 0, .12);
+  border-radius: 50%;
+  cursor: pointer;
+}
+.bs-colors .sw.on { box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px var(--accent); }
+
+.bs-sub { margin: 6px 0; font-size: 11px; color: var(--muted); }
+.bs-branch { display: flex; align-items: center; gap: 6px; padding: 4px 0; font-size: 12.5px; }
+.bs-branch .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.bs-branch-del { margin-left: auto; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
 
 /* 滚动条 */
 ::-webkit-scrollbar { width: 10px; height: 10px; }

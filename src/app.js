@@ -24,6 +24,7 @@ require('./routes/tree')(add);
 require('./routes/settings')(add);
 require('./routes/ai')(add);
 require('./routes/annotations')(add);
+require('./routes/board')(add);
 
 function match(method, segs) {
   for (const route of routes) {

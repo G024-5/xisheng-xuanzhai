@@ -1,7 +1,7 @@
 import { api } from './api.js';
 import { $, esc, toast, mark, shortAuthors, debounce } from './ui.js';
 import * as reader from './reader.js';
-import * as mindmap from './mind.js';
+import * as board from './board.js';
 
 const state = {
   q: '',
@@ -907,50 +907,21 @@ reader.onToolbarClick(async ({ type, color, sel }) => {
   }
 });
 
-/* ==================== 知识树导图 ==================== */
+/* ==================== 文献拼图 ==================== */
 
-async function openMind() {
-  $('#mindOverlay').hidden = false;
+$('#btnMind').addEventListener('click', async () => {
   try {
-    await mindmap.open($('#mindMap'), {
-      onChange: () => { refreshAll().catch(() => {}); },
-      onError: (msg) => toast(msg),
-    });
+    await board.open({});
   } catch (err) {
-    toast(`导图载入失败：${err.message}`);
-    $('#mindOverlay').hidden = true;
+    toast(`拼图载入失败：${err.message}`);
+    $('#boardOverlay').hidden = true;
   }
-}
-
-function closeMind() {
-  mindmap.close();
-  $('#mindOverlay').hidden = true;
-}
-
-$('#btnMind').addEventListener('click', openMind);
-$('#mindClose').addEventListener('click', closeMind);
-$('#mindFit').addEventListener('click', () => mindmap.fit());
-
-$('#mindTemplate').addEventListener('click', () => {
-  $('#tplBody').innerHTML = mindmap.TEMPLATES.map((t) => `
-    <div class="opt" data-tpl="${t.id}">
-      <div>${esc(t.name)}</div>
-      <div class="hint">${esc(t.desc)}</div>
-    </div>`).join('');
-  $('#tplModal').hidden = false;
 });
 
-$('#tplClose').addEventListener('click', () => { $('#tplModal').hidden = true; });
-$('#tplModal').addEventListener('click', (e) => { if (e.target.id === 'tplModal') $('#tplModal').hidden = true; });
+$('#boardClose').addEventListener('click', () => board.close());
 
-$('#tplBody').addEventListener('click', (e) => {
-  const opt = e.target.closest('[data-tpl]');
-  if (!opt) return;
-  if (!confirm('模板会替换当前导图里的全部节点（文献本身不受影响），继续？')) return;
-  mindmap.applyTemplate(opt.dataset.tpl);
-  $('#tplModal').hidden = true;
-  toast('模板已套用，双击节点即可改名');
-});
+board.bindCanvas();
+board.bindToolbar();
 
 /* ==================== 键盘 ==================== */
 
@@ -961,8 +932,7 @@ document.addEventListener('keydown', (e) => {
     $('#q').select();
   }
   if (e.key === 'Escape') {
-    if (!$('#tplModal').hidden) { $('#tplModal').hidden = true; return; }
-    if (!$('#mindOverlay').hidden) { closeMind(); return; }
+    if (!$('#boardOverlay').hidden) { board.close(); return; }
     if (!$('#addModal').hidden) { closeAddModal(); return; }
     if (!$('#editModal').hidden) { closeEditModal(); return; }
     if (!$('#settingsModal').hidden) { $('#settingsModal').hidden = true; return; }
