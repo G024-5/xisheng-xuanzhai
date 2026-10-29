@@ -92,15 +92,49 @@ body { display: flex; flex-direction: column; }
   transition: grid-template-columns .18s ease;
 }
 
-/* 侧栏折叠（仅普通模式；专注模式下本来就全隐藏）
-   注意：sidebar 是 display:none，不占网格列，
-   所以这里只剩「列表 + 详情」两列，不能再写三列。 */
-html.side-collapsed .layout { grid-template-columns: 320px 1fr; }
-html.side-collapsed .sidebar { display: none; }
+/* 显式占位：某一栏 display:none 时，其余栏不会挤到错误的列。
+   之前没有这一步，折叠侧栏后详情被挤进 320px 列。 */
+.sidebar { grid-column: 1; }
+.list-pane { grid-column: 2; }
+.detail { grid-column: 3; }
 
 .list-pane, .detail { min-width: 0; }
 
-.side-toggle { font-size: 16px; margin-right: -2px; }
+/* 三个分栏各自独立折叠 */
+html.side-collapsed .layout { grid-template-columns: 0 320px 1fr; }
+html.side-collapsed .sidebar { display: none; }
+
+html.list-collapsed .layout { grid-template-columns: 210px 0 1fr; }
+html.list-collapsed .list-pane { display: none; }
+
+html.side-collapsed.list-collapsed .layout { grid-template-columns: 0 0 1fr; }
+
+/* 三块面板的开关（分段控件） */
+.view-toggles {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: #f0f3f1;
+}
+.vt-btn {
+  border: 0;
+  background: transparent;
+  color: #8b9490;
+  font-size: 11.5px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background .12s ease, color .12s ease;
+}
+.vt-btn:hover { color: var(--text); }
+.vt-btn.on {
+  background: #fff;
+  color: var(--accent);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(16, 24, 20, .08);
+}
+
 .topbar-btn { height: 26px; padding: 0 10px; font-size: 12px; }
 
 .sidebar {
@@ -234,7 +268,7 @@ mark { background: #fff0a8; color: inherit; border-radius: 2px; padding: 0 1px; 
 .head-top { display: flex; align-items: flex-start; gap: 8px; }
 .head-top h1 { flex: 1; min-width: 0; }
 .head-actions { display: flex; gap: 6px; align-items: center; flex: none; }
-.head-toggle { display: none; }
+.head-toggle { display: inline-block; transition: transform .15s ease; }
 #headExtra { margin-top: 2px; }
 
 .paper-head h1 {
@@ -310,31 +344,17 @@ mark { background: #fff0a8; color: inherit; border-radius: 2px; padding: 0 1px; 
 body.hide-notes .reader { grid-template-columns: 1fr; }
 body.hide-notes .note-box, body.hide-notes .splitter { display: none; }
 
-/* 专注模式：隐藏顶栏与左右两栏，标题栏压成一行 */
-body.focus .topbar { display: none; }
-body.focus .sidebar, body.focus .list-pane { display: none; }
-body.focus .layout { grid-template-columns: 1fr; }
-
-body.focus .paper-head { padding: 5px 12px; }
-body.focus .paper-head h1 {
+/* 文献信息栏折叠：只留一行标题，PDF 立刻变高 */
+html.head-collapsed .paper-head { padding: 6px 16px; }
+html.head-collapsed #headExtra { display: none; }
+html.head-collapsed .paper-head h1 {
   margin: 0;
-  font-size: 12.5px;
-  font-weight: 550;
-  color: #55555c;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-body.focus #headExtra { display: none; }
-body.focus .head-toggle { display: inline-block; }
-body.focus.focus-expand #headExtra { display: block; }
-body.focus.focus-expand .paper-head { padding-bottom: 10px; }
-
-.exit-focus {
-  position: fixed; right: 16px; bottom: 16px; z-index: 40;
-  background: #1c1c1e; color: #fff; border: 0; border-radius: 999px;
-  padding: 7px 14px; font-size: 12px; cursor: pointer; opacity: .88;
-  box-shadow: 0 4px 14px rgba(0,0,0,.2);
-}
-.exit-focus:hover { opacity: 1; }
+html.head-collapsed .head-toggle { transform: rotate(180deg); }
 
 /* ---------- AI ---------- */
 .ai-box {

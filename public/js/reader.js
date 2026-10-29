@@ -20,6 +20,9 @@ let onPageChange = () => {};
 let toolbar = null;
 let pendingSel = null;
 let handlersAttached = false;
+let autoFit = true;
+let resizeObserver = null;
+let resizeTimer = null;
 
 async function ensureLib() {
   if (lib) return lib;
@@ -42,7 +45,7 @@ export async function open(id, hostEl, opts = {}) {
   paperId = id;
   host = hostEl;
   onPageChange = opts.onPageChange || (() => {});
-  scale = Number(localStorage.getItem('pd.pdfScale')) || 1.15;
+  autoFit = true;
 
   host.innerHTML = '';
   host.classList.add('pdf-host-loading');
@@ -51,10 +54,12 @@ export async function open(id, hostEl, opts = {}) {
     const l = await ensureLib();
     doc = await l.getDocument({ url: `/api/papers/${id}/file` }).promise;
 
+    scale = await fitScaleFor();
     annotations = await fetchAnnotations(id);
     await buildPages();
     host.classList.remove('pdf-host-loading');
     if (!handlersAttached) { attachSelectionHandlers(); handlersAttached = true; }
+    watchResize();
     syncZoomLabel();
     return { numPages: doc.numPages };
   } catch (err) {
@@ -62,6 +67,36 @@ export async function open(id, hostEl, opts = {}) {
     fallbackToIframe(id);
     return { numPages: 0, fallback: true };
   }
+}
+
+/** 按容器宽度算缩放：边栏越少，页面越大 */
+async function fitScaleFor() {
+  if (!doc || !host) return scale;
+  try {
+    const page = await doc.getPage(1);
+    const base = page.getViewport({ scale: 1 });
+    const avail = Math.max(280, host.clientWidth - 28);
+    return Math.min(2.6, Math.max(0.4, avail / base.width));
+  } catch {
+    return scale;
+  }
+}
+
+function watchResize() {
+  if (resizeObserver || !host) return;
+  resizeObserver = new ResizeObserver(() => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(async () => {
+      if (!autoFit || !doc) return;
+      const next = await fitScaleFor();
+      if (Math.abs(next - scale) < 0.02) return;
+      scale = next;
+      rendered.clear();
+      await buildPages();
+      syncZoomLabel();
+    }, 260);
+  });
+  resizeObserver.observe(host);
 }
 
 export function close() {
@@ -339,8 +374,9 @@ export async function zoom(delta) {
     return cur;
   })();
 
+  // 手动缩放后不再自动跟随容器宽度
+  autoFit = false;
   scale = Math.max(0.5, Math.min(3, Number((scale + delta).toFixed(2))));
-  localStorage.setItem('pd.pdfScale', String(scale));
   rendered.clear();
   await buildPages();
   jumpToPage(anchorPage);

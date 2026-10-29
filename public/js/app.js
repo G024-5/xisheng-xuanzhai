@@ -280,14 +280,37 @@ async function openSettings() {
   $('#setKey').focus();
 }
 
-/* ==================== 专注 / 分栏 ==================== */
+/* ==================== 面板折叠（侧栏 / 列表 / 信息栏） ==================== */
 
-function setFocus(on) {
-  document.body.classList.toggle('focus', on);
-  if (!on) document.body.classList.remove('focus-expand');
-  $('#exitFocus').hidden = !on;
-  $('#btnFocus').textContent = on ? '退出' : '专注';
-  $('#btnToggleHead').textContent = document.body.classList.contains('focus-expand') ? '▴' : '▾';
+const PANELS = {
+  side: 'side-collapsed',
+  list: 'list-collapsed',
+  head: 'head-collapsed',
+};
+
+function setPanel(name, collapsed) {
+  const cls = PANELS[name];
+  if (!cls) return;
+  document.documentElement.classList.toggle(cls, collapsed);
+  try {
+    localStorage.setItem(`pd.${name}Collapsed`, collapsed ? '1' : '0');
+  } catch { /* 隐私模式忽略 */ }
+  syncPanelButtons();
+}
+
+function togglePanel(name) {
+  setPanel(name, !document.documentElement.classList.contains(PANELS[name]));
+}
+
+function syncPanelButtons() {
+  document.querySelectorAll('.vt-btn').forEach((btn) => {
+    const cls = PANELS[btn.dataset.toggle];
+    btn.classList.toggle('on', !document.documentElement.classList.contains(cls));
+  });
+  const head = $('#btnToggleHead');
+  if (head) head.title = document.documentElement.classList.contains(PANELS.head)
+    ? '展开文献信息'
+    : '收起文献信息';
 }
 
 function initSplitter() {
@@ -471,14 +494,12 @@ $('#btnNotes').addEventListener('click', () => {
   $('#btnNotes').classList.toggle('off', hidden);
 });
 
-$('#btnFocus').addEventListener('click', () => {
-  setFocus(!document.body.classList.contains('focus'));
+$('#viewToggles').addEventListener('click', (e) => {
+  const btn = e.target.closest('.vt-btn');
+  if (btn) togglePanel(btn.dataset.toggle);
 });
-$('#btnToggleHead').addEventListener('click', () => {
-  const on = document.body.classList.toggle('focus-expand');
-  $('#btnToggleHead').textContent = on ? '▴' : '▾';
-});
-$('#exitFocus').addEventListener('click', () => setFocus(false));
+
+$('#btnToggleHead').addEventListener('click', () => togglePanel('head'));
 
 $('#btnSettings').addEventListener('click', openSettings);
 $('#settingsClose').addEventListener('click', () => { $('#settingsModal').hidden = true; });
@@ -933,15 +954,27 @@ $('#boardClose').addEventListener('click', () => board.close());
 board.bindCanvas();
 board.bindToolbar();
 
-/* ==================== 侧栏折叠 ==================== */
+/* ==================== 面板状态 ==================== */
 
-$('#btnSide').addEventListener('click', () => {
-  const collapsed = !document.documentElement.classList.contains('side-collapsed');
-  document.documentElement.classList.toggle('side-collapsed', collapsed);
-  try {
-    localStorage.setItem('pd.sideCollapsed', collapsed ? '1' : '0');
-  } catch { /* 隐私模式下忽略 */ }
-});
+function initPanels() {
+  // 没有存过偏好时，按窗口宽度给一个合理的初始布局
+  const saved = (key) => {
+    try { return localStorage.getItem(key); } catch { return null; }
+  };
+  const w = window.innerWidth;
+
+  if (saved('pd.sideCollapsed') === null) {
+    setPanel('side', w < 1100);
+  }
+  if (saved('pd.listCollapsed') === null) {
+    setPanel('list', w < 820);
+  }
+  if (saved('pd.headCollapsed') === null) {
+    setPanel('head', w < 720);
+  }
+
+  syncPanelButtons();
+}
 
 /* ==================== 键盘 ==================== */
 
@@ -957,13 +990,14 @@ document.addEventListener('keydown', (e) => {
     if (!$('#editModal').hidden) { closeEditModal(); return; }
     if (!$('#settingsModal').hidden) { $('#settingsModal').hidden = true; return; }
     if (!$('#modal').hidden) { $('#modal').hidden = true; return; }
-    if (document.body.classList.contains('focus')) setFocus(false);
   }
 });
 
 /* ==================== 启动 ==================== */
 
 async function boot() {
+  initPanels();
+
   const b = await api.bootstrap();
   state.collections = b.collections;
   state.settings = b.settings;

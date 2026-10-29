@@ -5,11 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>溪声轩斋</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-<!-- 先于样式恢复折叠状态，避免打开瞬间闪一下 -->
+<!-- 先于样式恢复三块面板的折叠状态，避免打开瞬间闪一下 -->
 <script>
   try {
-    if (localStorage.getItem('pd.sideCollapsed') === '1') {
-      document.documentElement.classList.add('side-collapsed');
+    const map = { sideCollapsed: 'side-collapsed', listCollapsed: 'list-collapsed', headCollapsed: 'head-collapsed' };
+    for (const [key, cls] of Object.entries(map)) {
+      if (localStorage.getItem('pd.' + key) === '1') document.documentElement.classList.add(cls);
     }
   } catch (e) {}
 </script>
@@ -17,11 +18,15 @@
 </head>
 <body>
   <header class="topbar">
-    <button id="btnSide" class="icon-btn side-toggle" title="收起 / 展开侧栏">☰</button>
     <div class="brand">
       <span class="dot"></span>
       <span class="brand-name">溪声轩斋</span>
-      <span class="badge">v0.4.4</span>
+      <span class="badge">v0.5.0</span>
+    </div>
+    <div class="view-toggles" id="viewToggles" title="三块面板可分别收起">
+      <button class="vt-btn on" data-toggle="side">侧栏</button>
+      <button class="vt-btn on" data-toggle="list">列表</button>
+      <button class="vt-btn on" data-toggle="head">信息</button>
     </div>
     <div class="search-wrap">
       <input id="q" type="search" placeholder="搜索标题、摘要、作者、标签、笔记…（Ctrl+K）" autocomplete="off" spellcheck="false" />
@@ -88,8 +93,7 @@
             <h1 id="pTitle"></h1>
             <div class="head-actions">
               <button id="btnNotes" class="btn ghost" title="显示 / 隐藏笔记栏">笔记</button>
-              <button id="btnFocus" class="btn ghost" title="专注阅读：隐藏全部边框，只留 PDF（Esc 退出）">专注</button>
-              <button id="btnToggleHead" class="icon-btn head-toggle" title="展开 / 收起文献信息">▾</button>
+              <button id="btnToggleHead" class="icon-btn head-toggle" title="收起 / 展开文献信息">▾</button>
             </div>
           </div>
           <div id="headExtra">
@@ -140,8 +144,6 @@
       </div>
     </section>
   </main>
-
-  <button id="exitFocus" class="exit-focus" hidden>退出专注 · Esc</button>
 
   <!-- 文献拼图：自由画布 -->
   <div class="board-overlay" id="boardOverlay" hidden>
