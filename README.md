@@ -85,9 +85,23 @@ cd xisheng-xuanzhai
 node src/server.js        # 打开 http://127.0.0.1:5178
 ```
 
-Windows 用户直接双击 `start.bat` 也行。
+Windows 用户直接双击 `start.bat`。
 
 首次启动会在 `data/` 下建库、跑迁移；之后点左上角「＋」添加第一篇文献。
+
+> ⚠️ **`start.bat` 打开的命令行窗口不要关**——它就是服务本身，关掉网页就断了。
+
+### 打开网页显示「无法访问」
+
+按顺序检查：
+
+1. **窗口里有没有红字报错**——`start.bat` 现在出错不会立刻关窗，会停在原地让你看
+2. **端口被占用**：报 `EADDRINUSE` 说明已经开着一个实例，直接访问 <http://127.0.0.1:5178> 即可；
+   要换端口：`set PORT=5179 && node src/server.js`
+3. **Node 版本太低**：`node -v` 必须是 22.5 以上（`node:sqlite` 需要）
+4. **在压缩包里直接双击**：请先解压到本地目录，不要在 ZIP 预览窗口里运行 `start.bat`
+
+还是不行就双击 **`doctor.bat`**，它会把环境、文件完整性、数据库、端口状态列出来，把输出整段贴出来即可定位。
 
 **已有 Zotero 库？** 一次性搬过来（只读）：
 
@@ -123,10 +137,12 @@ xisheng-xuanzhai/
 │  ├─ routes/             papers / notes / tree / board / annotations / settings / ai / meta
 │  ├─ services/           llm / pdfmeta / pdftext / ingest / metadata / settings
 │  └─ util/               http（Range 流）/ upload（流式落盘）
-├─ scripts/               导入器、备份、自检
+├─ scripts/               导入器、备份、自检（doctor.js）、就绪探测
 ├─ public/                原生 JS，无构建步骤
 │  ├─ js/{api,ui,app,reader,board}.js
 │  └─ vendor/pdfjs/       pdf.js 4.10.38（Apache-2.0，原样分发）
+├─ start.bat              启动（先自检，再等服务就绪后开浏览器）
+├─ doctor.bat             打不开时先跑这个
 └─ data/                  app.db + storage/ + backups/（gitignore）
 ```
 
