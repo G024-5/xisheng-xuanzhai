@@ -36,10 +36,23 @@ for (const f of files) {
   }
 }
 
+// 4. .bat 必须是纯 ASCII。
+// cmd.exe 按系统代码页（中文 Windows 是 GBK）解析批处理文件，
+// 无 BOM 的 UTF-8 中文会被拆成乱码，甚至把后半句当成命令执行。
+const bats = fs.readdirSync(root).filter((f) => f.toLowerCase().endsWith('.bat'));
+for (const f of bats) {
+  const buf = fs.readFileSync(path.join(root, f));
+  const bad = buf.findIndex((b) => b > 127);
+  if (bad !== -1) {
+    const line = buf.subarray(0, bad).toString('utf8').split('\n').length;
+    problems.push(`${f} 第 ${line} 行含非 ASCII 字符，cmd 会解析错乱（批处理只写英文）`);
+  }
+}
+
 if (problems.length) {
   console.error('发现问题：');
   for (const p of problems) console.error('  ✗ ' + p);
   process.exitCode = 1;
 } else {
-  console.log(`✓ ${files.length} 个前端模块、${ids.size} 个 id，引用全部有效`);
+  console.log(`✓ ${files.length} 个前端模块、${ids.size} 个 id，${bats.length} 个批处理文件，检查通过`);
 }

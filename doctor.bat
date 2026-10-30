@@ -1,11 +1,13 @@
 @echo off
 chcp 65001 >nul
 cd /d "%~dp0"
-title 溪声轩斋 · 环境自检
+title Xisheng Xuanzhai - doctor
 
 where node >nul 2>nul
 if errorlevel 1 (
-  echo 没有找到 Node.js，请先安装：https://nodejs.org/
+  echo   [ERROR] Node.js not found.
+  echo   Install it from https://nodejs.org/ and run again.
+  echo.
   pause
   exit /b 1
 )

@@ -2,6 +2,21 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/) 与 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [0.5.2] - 2026-10-30
+
+修 0.5.1 引入的批处理编码问题。
+
+### 修复
+
+- `start.bat` / `doctor.bat` 改为纯 ASCII。cmd.exe 按系统代码页（中文 Windows 是 GBK）
+  逐行解析 `.bat`，无 BOM 的 UTF-8 中文会被拆成乱码，甚至把残句当命令执行，
+  报「'xxx' 不是内部或外部命令」，启动流程直接断掉。
+- 中文提示移到 README 与 `doctor.js` 输出（Node 输出 UTF-8，配合 `chcp 65001` 显示正常）。
+
+### 新增
+
+- `scripts/check-dom.js` 增加校验：任何 `.bat` 含非 ASCII 字符即报错，防止再犯。
+
 ## [0.5.1] - 2026-10-30
 
 修「双击 start.bat 后浏览器打不开」。
