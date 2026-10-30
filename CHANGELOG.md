@@ -2,6 +2,24 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/) 与 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [0.5.3] - 2026-10-30
+
+给没配过环境的人一份安装指南。
+
+### 新增
+
+- `docs/安装指南.md`：从装 Node.js 到第一篇文献，面向非技术用户
+  - 每步都有「应该看到什么」，含失败现象对照表
+  - 数据备份、换电脑、卸载、常见问题
+- `docs/安装指南.html` 与根目录 `安装指南.html`：同一份内容的离线网页版，
+  双击即看，无需 Markdown 阅读器，支持打印
+- `scripts/build-guide.js`：从 Markdown 生成 HTML（零依赖），`npm run guide`
+
+### 变更
+
+- README 快速开始顶部指向安装指南
+- `package.json` 增加 `guide` 脚本
+
 ## [0.5.2] - 2026-10-30
 
 修 0.5.1 引入的批处理编码问题。

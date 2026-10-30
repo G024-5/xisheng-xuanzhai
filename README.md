@@ -79,6 +79,9 @@ Zotero 适合**收集**文献，但不适合**组织**知识；Obsidian 适合**
 
 ## 快速开始
 
+> 完全没配过环境？看 **[安装与使用指南（图文版）](docs/安装指南.md)** ／ 下载后可直接双击 `docs/安装指南.html`。
+> 从装 Node.js 到第一篇文献，一步步来，10 分钟。
+
 ```bash
 git clone https://github.com/<you>/xisheng-xuanzhai.git
 cd xisheng-xuanzhai
@@ -137,7 +140,8 @@ xisheng-xuanzhai/
 │  ├─ routes/             papers / notes / tree / board / annotations / settings / ai / meta
 │  ├─ services/           llm / pdfmeta / pdftext / ingest / metadata / settings
 │  └─ util/               http（Range 流）/ upload（流式落盘）
-├─ scripts/               导入器、备份、自检（doctor.js）、就绪探测
+├─ scripts/               导入器、备份、自检（doctor.js）、就绪探测、文档生成
+├─ docs/                  安装与使用指南（.md 源 + 可双击的 .html）
 ├─ public/                原生 JS，无构建步骤
 │  ├─ js/{api,ui,app,reader,board}.js
 │  └─ vendor/pdfjs/       pdf.js 4.10.38（Apache-2.0，原样分发）
@@ -176,6 +180,8 @@ xisheng-xuanzhai/
 node scripts/check-dom.js   # 前端 id / import 一致性
 node scripts/verify.js      # 接口端到端（需先启动服务）
 ```
+
+改了 `docs/安装指南.md` 之后，跑 `node scripts/build-guide.js` 重新生成 HTML（根目录与 `docs/` 各一份，同一份源）。
 
 ## 许可
 

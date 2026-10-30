@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>溪声轩斋 · 安装与使用指南（Windows）</title>
+<style>
+:root { --ink:#1c1c1e; --muted:#6b7280; --line:#e5e7eb; --accent:#0f7a5a; --soft:#e6f4ee; }
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 48px 20px 96px;
+  font: 15px/1.75 -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  color: var(--ink); background: #fbfbfc;
+}
+main { max-width: 780px; margin: 0 auto; background: #fff; padding: 48px 56px;
+  border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 10px 30px -20px rgba(0,0,0,.35); }
+h1 { font-size: 26px; margin: 0 0 8px; letter-spacing: .5px; }
+h2 { font-size: 19px; margin: 40px 0 12px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--accent); }
+h3 { font-size: 16px; margin: 26px 0 8px; }
+p { margin: 10px 0; }
+a { color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--soft); }
+a:hover { border-bottom-color: var(--accent); }
+code { background: #f3f5f4; padding: 2px 6px; border-radius: 4px; font-size: 13px;
+  font-family: "Cascadia Code", Consolas, monospace; }
+pre { background: #1f2421; color: #e6ebe8; padding: 16px 18px; border-radius: 10px; overflow-x: auto; }
+pre code { background: transparent; padding: 0; color: inherit; font-size: 13px; line-height: 1.7; }
+blockquote { margin: 14px 0; padding: 10px 16px; background: var(--soft); border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0; }
+blockquote p { margin: 0; }
+ul, ol { margin: 10px 0; padding-left: 26px; }
+li { margin: 5px 0; }
+table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+th { background: #f6f8f7; font-weight: 600; }
+hr { border: 0; border-top: 1px solid var(--line); margin: 36px 0; }
+@media print {
+  body { background: #fff; padding: 0; }
+  main { border: 0; box-shadow: none; padding: 0; max-width: none; }
+  h2 { break-after: avoid; }
+  pre, table, blockquote { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<main>
+<h1>溪声轩斋 · 安装与使用指南（Windows）</h1>
+<blockquote>这份指南写给<strong>完全没配过开发环境</strong>的人。全程只需要装一个软件、点几下鼠标。 预计耗时：10 分钟。</blockquote>
+<hr />
+<h2>一、你需要什么</h2>
+<ul><li>一台 Windows 10 或 Windows 11 电脑</li><li>约 200 MB 空闲磁盘</li><li>能上网（只有装 Node.js 和下载时需要）</li></ul>
+<p><strong>不需要</strong>：会编程、会命令行、会配置数据库、买服务器。</p>
+<hr />
+<h2>二、第一步：安装 Node.js</h2>
+<p>这是<strong>唯一</strong>需要安装的软件。整个程序靠它运行。</p>
+<ol><li>浏览器打开 <a href="https://nodejs.org/zh-cn" target="_blank" rel="noreferrer">https://nodejs.org/zh-cn</a></li><li>点绿色大按钮下载 <strong>LTS（长期支持版）</strong>，选 <strong>Windows 安装包 (.msi)</strong></li><li>双击下载好的文件，一路点「下一步」，最后点「安装」</li><li>安装选项全部保持默认即可，其中「Add to PATH」必须是勾选状态（默认就是）</li><li>安装完成后，<strong>验证是否成功</strong>：</li><li>按 <code>Win + R</code>，输入 <code>cmd</code>，回车，会弹出一个黑色窗口</li><li>输入 <code>node -v</code> 后回车</li><li>显示类似 <code>v22.14.0</code> 或更高的版本号 → 成功</li><li>若显示「不是内部或外部命令」→ 重启电脑再试一次；仍然不行说明没装成功，重新安装一遍</li></ol>
+<blockquote>建议 Node.js 版本 ≥ 22.5。版本太低会启动失败。</blockquote>
+<hr />
+<h2>三、第二步：下载并解压</h2>
+<ol><li>下载项目压缩包（<code>xisheng-xuanzhai-vX.X.X.zip</code>）</li><li>找到这个 zip 文件，<strong>右键 → 全部解压缩</strong></li><li>解压到一个<strong>纯英文、不含空格的路径</strong>，例如：</li></ol>
+<p>   ``<code>    D:\Xisheng    </code>``</p>
+<p>   不要放在桌面、下载文件夹或中文路径下，某些情况下会因权限或编码出错。</p>
+<ol><li>打开解压出来的文件夹，应该能看到这些内容：</li></ol>
+<p>   ``<code>    Xisheng\    ├─ start.bat      ← 启动用    ├─ doctor.bat     ← 出问题时自检用    ├─ src\    ├─ public\    └─ README.md    </code>``</p>
+<blockquote>⚠️ 不要在压缩包的预览窗口里直接双击 <code>start.bat</code>，必须先解压。</blockquote>
+<hr />
+<h2>四、第三步：启动</h2>
+<ol><li>双击 <strong><code>start.bat</code></strong></li><li>会弹出一个黑色命令行窗口，显示类似：</li></ol>
+<p>   ```    Xisheng Xuanzhai - starting    Folder: D:\Xisheng    Node: v22.14.0</p>
+<p>   溪声轩斋 · http://127.0.0.1:5178    数据目录 D:\Xisheng\data    ```</p>
+<ol><li>几秒后浏览器会<strong>自动打开</strong> <a href="http://127.0.0.1:5178" target="_blank" rel="noreferrer">http://127.0.0.1:5178</a></li><li>看到「分类 / 文献列表 / 阅读区」三栏界面，就成功了</li></ol>
+<p><strong>关于那个黑色窗口：</strong></p>
+<ul><li>它就是程序本体，<strong>关掉窗口 = 关闭程序</strong>，网页立刻打不开</li><li>用的时候把它缩到后台即可，不用管它</li><li>下次使用：再双击一次 <code>start.bat</code></li></ul>
+<hr />
+<h2>五、第一次使用</h2>
+<h3>添加第一篇文献</h3>
+<ol><li>点左上角列表标题旁的 <strong>＋</strong>，或直接把 PDF <strong>拖进窗口</strong></li><li>选择 PDF 文件</li><li>程序会自动识别标题和作者，<strong>请核对</strong>，不对就直接改</li><li>点「添加到文库」</li></ol>
+<p>也可以粘贴 DOI 或 arXiv 号（如 <code>2301.12345</code>）自动抓取，arXiv 还会顺带下载 PDF。</p>
+<h3>阅读与笔记</h3>
+<ul><li>中间列表点一篇文献，右侧显示 PDF</li><li>在 PDF 里<strong>选中文字</strong>，会浮出四色高亮按钮，点一下就标好了</li><li>右下角「笔记」栏可以直接写，自动保存</li><li>顶部「侧栏 / 列表 / 信息」三个按钮可以收起对应面板，PDF 会跟着变大</li></ul>
+<h3>文献拼图</h3>
+<p>点顶部「拼图」：</p>
+<ol><li>「＋ 拼图」新建一张画布</li><li>「＋ 文献卡」添加一张卡，在右侧选文献、写「问题 / 方案 / 局限」</li><li>拖动卡片摆位置；点卡片右下角小圆点，再点另一张卡，就能连线</li><li>可以给卡片选颜色、归入支链</li></ol>
+<hr />
+<h2>六、可选：接入 AI 摘要</h2>
+<p>不配置也能正常用，只是没有「AI 摘要」按钮。</p>
+<ol><li>打开 <a href="https://platform.deepseek.com" target="_blank" rel="noreferrer">https://platform.deepseek.com</a> 注册并登录</li><li>左侧「API Keys」→ 创建，复制那串 <code>sk-</code> 开头的密钥</li><li>回到应用，点右上角 <strong>⚙</strong></li><li>粘贴密钥 → 点「测试连接」→ 显示正常后点「保存」</li></ol>
+<p>成本：每篇论文约 ¥0.02（读全文生成四段摘要）。</p>
+<p>密钥只保存在你自己电脑的 <code>data\app.db</code> 里，不会上传到别处。</p>
+<hr />
+<h2>七、数据在哪、怎么备份</h2>
+<p>所有数据都在项目目录的 <code>data\</code> 文件夹里：</p>
+<pre><code>data\
+├─ app.db          数据库（文献信息、笔记、标注）
+├─ storage\        PDF 原文
+└─ backups\        自动备份（每天一份，保留 10 份）</code></pre>
+<p><strong>备份</strong>：把整个 <code>data</code> 文件夹复制到别处即可（U 盘、网盘）。</p>
+<p><strong>换电脑</strong>：新电脑装好 Node.js，把整个项目文件夹拷过去，双击 <code>start.bat</code>。</p>
+<p><strong>恢复</strong>：用备份的 <code>data</code> 文件夹覆盖回去。</p>
+<hr />
+<h2>八、出问题怎么办</h2>
+<table><thead><tr><th>现象</th><th>原因</th><th>处理</th></tr></thead><tbody><tr><td>双击 <code>start.bat</code> 窗口一闪就没了</td><td>缺 Node.js 或文件不完整</td><td>窗口会停留提示，看清红字；仍不行跑 <code>doctor.bat</code></td></tr><tr><td>网页显示「无法访问此网站」</td><td>服务没起来，或浏览器开得太早</td><td>看黑色窗口里有没有报错；重新双击 <code>start.bat</code></td></tr><tr><td>提示 <code>EADDRINUSE</code> / 端口被占用</td><td>已经开着一个实例</td><td>直接访问 <a href="http://127.0.0.1:5178" target="_blank" rel="noreferrer">http://127.0.0.1:5178</a>，或关掉旧窗口</td></tr><tr><td><code>node</code> 不是内部或外部命令</td><td>Node.js 没装好或没加进 PATH</td><td>重装 Node.js，勾选 Add to PATH，然后重启</td></tr><tr><td>浏览器打开是空白页</td><td>浏览器太旧</td><td>用 Edge 或 Chrome 最新版</td></tr><tr><td>杀毒软件报警</td><td>本地服务被误判</td><td>选择「允许」；程序不联网上传任何数据</td></tr><tr><td>PDF 显示不出来</td><td>文件损坏或加密</td><td>换一个 PDF 试试</td></tr><tr><td>中文路径下启动报错</td><td>路径编码问题</td><td>把文件夹移到 <code>D:\Xisheng</code> 这类纯英文路径</td></tr></tbody></table>
+<h3>看不懂报错时</h3>
+<p>双击 <strong><code>doctor.bat</code></strong>，它会列出：Node 版本、关键文件是否齐全、数据目录能否写入、数据库状态、端口占用情况。</p>
+<p>把整屏内容截图发给开发者即可定位。</p>
+<hr />
+<h2>九、常见问题</h2>
+<p><strong>Q：能不能不装 Node.js？</strong> A：暂时不能。它是运行环境，就像看视频要装播放器。</p>
+<p><strong>Q：能多台电脑同步吗？</strong> A：这一版是单机版，数据只在本机。需要同步得自己用网盘同步 <code>data</code> 文件夹（同时只能开一台，否则会冲突）。</p>
+<p><strong>Q：能给别人用吗？</strong> A：这只是本地程序，只有你这台电脑能访问。想共享需要额外的服务器部署，不在本指南范围。</p>
+<p><strong>Q：手机能用吗？</strong> A：不能，页面只监听本机地址。</p>
+<p><strong>Q：怎么卸载？</strong> A：直接删掉整个项目文件夹。Node.js 如果不想留，去「设置 → 应用」里卸载。</p>
+<p><strong>Q：数据会不会丢？</strong> A：程序每天自动备份到 <code>data\backups</code>，保留 10 份。但删除操作不可撤销，重要内容请另外备份。</p>
+<hr />
+<h2>十、一页速查</h2>
+<pre><code>装 Node.js  →  解压到纯英文路径  →  双击 start.bat  →  浏览器自动打开
+                                        ↓
+                              黑窗口别关，关了服务就停</code></pre>
+<p>出问题：先看黑窗口的红字 → 不行就跑 <code>doctor.bat</code> → 截图发出来。</p>
+</main>
+</body>
+</html>
