@@ -17,5 +17,10 @@ config.json
 logs/
 .tmp/
 .tmp-*/
+tmp-*/
 .DS_Store
 Thumbs.db
+
+# npm / electron 本地缓存与打包产物
+.npm-cache/
+release/

@@ -2,6 +2,44 @@
 
 本项目遵循 [语义化版本](https://semver.org/lang/zh-CN/) 与 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)。
 
+## [0.6.0] - 2026-11-18
+
+桌面版。不用装 Node、不用开浏览器，双击就是独立窗口。
+
+### 新增
+
+- **Electron 桌面外壳**（`electron/main.js`）：主进程内直接拉起原来的 http 服务，
+  窗口加载 `http://127.0.0.1:<port>`，前端代码零改动
+  - 单实例锁：重复双击会把已有窗口叫到前台，不再起第二个进程
+  - 端口自动选择：5178 被占就往后找 5179–5188，找不到交给系统分配
+  - 窗口大小与位置记住（存 `userData/window.json`）；最小 960×620
+  - 外链交给系统浏览器，站内跳转留在窗口内；关闭窗口即退出并优雅停服务
+  - `contextIsolation` 开、`nodeIntegration` 关，默认菜单移除
+- **打包配置**：`npm run dist` 产出 NSIS 安装包与免安装版（x64）
+  - `XishengXuanzhai-Setup-0.6.0.exe`（约 116 MB）、`XishengXuanzhai-Portable-0.6.0.exe`（约 106 MB）
+  - 应用图标 `build/icon.png` / `icon.ico`，由 `npm run icon` 生成
+- **`scripts/make-icon.js`**：纯 Node 光栅化 + 自带 PNG/ICO 编码，不依赖任何图形库
+- **`scripts/verify-electron.js`**：无头验证桌面外壳（替身 `electron` 模块），
+  检查单实例锁、端口区间、`/api/health`、首页可访问、数据目录建立、窗口安全选项
+- `src/util/port.js`：`isFree` / `looksLikeOurs` / `pickPort`
+
+### 变更
+
+- **数据目录**：打包运行时落到 `%APPDATA%\Xisheng\data`（asar 内不可写）；
+  源码运行仍是仓库下 `data/`；`XISHENG_DATA` 可覆盖两者
+- `src/server.js`：启动时先探测端口；已有本程序在跑则提示地址后正常退出（退出码 0）
+- README 增加「两种用法」（桌面版 / 源码版）与「自己打包桌面版」两节
+
+### 修复
+
+- 打包版窗口图标路径：`extraResources` 里的 `icon.ico` 在 `process.resourcesPath`，不在 asar 内
+
+### 打包机上的注意事项
+
+- `npmRebuild: false`：本项目没有原生依赖，关掉免得 electron-builder 白跑一次 rebuild
+- 构建需要 fork 子进程并下载 Electron / NSIS：受限环境（如沙箱）里会报 `spawn EPERM`
+- 国内下载慢就设 `ELECTRON_MIRROR` 与 `ELECTRON_BUILDER_BINARIES_MIRROR`（见 README）
+
 ## [0.5.3] - 2026-10-30
 
 给没配过环境的人一份安装指南。

@@ -1,8 +1,9 @@
 # 溪声轩斋
 
-> 一个跑在自己电脑上的文献管理与精读工具。**零依赖**——不需要 `npm install`，有 Node 就能开始。
+> 一个跑在自己电脑上的文献管理与精读工具。**零依赖**——不需要 `npm install`，有 Node 就能开始；
+> 不想装 Node 也行，直接双击桌面版安装包。
 
-**当前版本：v0.5.0-beta.1（内测）** ｜ Papers in, knowledge out.
+**当前版本：v0.6.0-beta.1（内测 · 首个桌面版）** ｜ Papers in, knowledge out.
 
 「溪声」取流水不腐之意——文献要常读常新，知识要流动起来。
 
@@ -77,6 +78,21 @@ Zotero 适合**收集**文献，但不适合**组织**知识；Obsidian 适合**
 
 仓库里**没有**：任何文献 / PDF / 笔记（`data/` 全在 `.gitignore` 里）、任何 API Key。
 
+## 两种用法
+
+**A. 桌面版**（不想碰命令行选这个）— Windows 10/11 x64
+
+| 文件 | 说明 | 大小 |
+|---|---|---|
+| `XishengXuanzhai-Setup-0.6.0.exe` | 安装到本机，开始菜单 / 桌面快捷方式，双击即用 | ~116 MB |
+| `XishengXuanzhai-Portable-0.6.0.exe` | 免安装，拷到 U 盘就能跑 | ~106 MB |
+
+- 不需要装 Node，也不占一个浏览器标签页；关窗口就是退出
+- 数据在 `%APPDATA%\Xisheng\data`（可从窗口标题栏的 ⚙ 看到实际路径）
+- 首次运行 Windows 可能弹「已保护你的电脑」→ **更多信息 → 仍要运行**。安装包没做代码签名
+
+**B. 源码版**（想改代码、或不是 Windows 选这个）—— 见下面的「从源码运行」。
+
 ## 快速开始
 
 > 完全没配过环境？看 **[安装与使用指南（图文版）](docs/安装指南.md)** ／ 下载后可直接双击 `docs/安装指南.html`。
@@ -122,6 +138,7 @@ Key 只存在本机 `data/app.db`，除发往你配置的 API 地址外不会发
 ## 数据与备份
 
 所有数据都在 `data/`：`app.db`、按 sha256 命名的 PDF、`backups/` 快照。
+（桌面版的数据目录在 `%APPDATA%\Xisheng\data`，内容完全一样；想搬就整个目录拷过去。）
 
 - 自动备份：每天 03:00 一次，保留 10 份
 - 手动备份：`npm run backup`
@@ -133,14 +150,17 @@ Key 只存在本机 `data/app.db`，除发往你配置的 API 地址外不会发
 
 ```
 xisheng-xuanzhai/
+├─ electron/
+│  └─ main.js             桌面外壳：拉起本地服务 + 开窗口（开发时 electron .）
 ├─ src/
 │  ├─ server.js           进程入口（含每日备份调度）
 │  ├─ app.js              路由表（node:http，无框架）
 │  ├─ db/                 连接、迁移器、备份、migrations/*.sql
 │  ├─ routes/             papers / notes / tree / board / annotations / settings / ai / meta
 │  ├─ services/           llm / pdfmeta / pdftext / ingest / metadata / settings
-│  └─ util/               http（Range 流）/ upload（流式落盘）
-├─ scripts/               导入器、备份、自检（doctor.js）、就绪探测、文档生成
+│  └─ util/               http（Range 流）/ upload（流式落盘）/ port（端口探测）
+├─ scripts/               导入器、备份、自检（doctor.js）、就绪探测、图标、文档生成
+├─ build/                 icon.png / icon.ico（脚本生成，进版本库）
 ├─ docs/                  安装与使用指南（.md 源 + 可双击的 .html）
 ├─ public/                原生 JS，无构建步骤
 │  ├─ js/{api,ui,app,reader,board}.js
@@ -167,18 +187,45 @@ xisheng-xuanzhai/
 
 ## 路线图
 
+- [x] Windows 桌面版（安装包 + 免安装版），不用装 Node
 - [ ] 面板宽度可拖拽并记忆
 - [ ] PDF 正文全文检索（`paper_text` 已缓存全文，接 FTS5 即可）
 - [ ] 拼图导出为图片 / Markdown
 - [ ] 卡片反向跳转到原文
+- [ ] 安装包代码签名（免去「已保护你的电脑」提示）
+
+## 自己打包桌面版
+
+需要 Node ≥ 22.5，首次会装开发依赖（Electron 本体约 240 MB，只在打包机上下载，不进仓库）。
+
+```bash
+npm install                     # 只装 electron + electron-builder，运行时不依赖它们
+
+npm run app                     # 开发模式：开一个桌面窗口，跳过浏览器
+npm run dist                    # 出安装包与免安装版到 release/
+npm run dist:dir                # 只出解包目录，调试用，快得多
+npm run icon                    # 重新生成 build/icon.png 与 build/icon.ico（纯 Node 画）
+node scripts/verify-electron.js # 无头验证桌面外壳：拉服务、开窗口、健康检查
+```
+
+国内网络下 `electron` 与 NSIS 的下载容易卡住，打包前设两个镜像：
+
+```powershell
+$env:ELECTRON_MIRROR = 'https://npmmirror.com/mirrors/electron/'
+$env:ELECTRON_BUILDER_BINARIES_MIRROR = 'https://npmmirror.com/mirrors/electron-builder-binaries/'
+```
+
+> 桌面版和源码版共用同一份 `src/` 与 `public/`，界面代码零改动——窗口只是把
+> `http://127.0.0.1:<port>` 装进一个浏览器壳里。端口 5178 被占时会自动往后找空位。
 
 ## 贡献
 
 欢迎 issue 和 PR。提交前请跑一遍：
 
 ```bash
-node scripts/check-dom.js   # 前端 id / import 一致性
-node scripts/verify.js      # 接口端到端（需先启动服务）
+node scripts/check-dom.js       # 前端 id / import 一致性（不需要服务）
+node scripts/verify.js          # 接口端到端（先启动服务；对着当前库跑，库里要有文献）
+node scripts/verify-electron.js # 桌面外壳（不需要图形界面）
 ```
 
 改了 `docs/安装指南.md` 之后，跑 `node scripts/build-guide.js` 重新生成 HTML（根目录与 `docs/` 各一份，同一份源）。

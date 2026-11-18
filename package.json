@@ -1,15 +1,21 @@
 {
   "name": "xisheng-xuanzhai",
-  "version": "0.5.3",
-  "description": "溪声轩斋 · 单机自用的文献管理与精读工具（零依赖）",
+  "version": "0.6.0",
+  "description": "溪声轩斋 · 单机自用的文献管理与精读工具（后端零依赖）",
   "private": true,
   "license": "MIT",
+  "author": "王明瀚",
+  "main": "electron/main.js",
   "engines": {
     "node": ">=22.5"
   },
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
+    "app": "electron .",
+    "icon": "node scripts/make-icon.js",
+    "dist": "electron-builder --win",
+    "dist:dir": "electron-builder --win --dir",
     "import": "node scripts/import-zotero.js",
     "backup": "node scripts/backup.js",
     "check": "node scripts/check-dom.js",
@@ -23,6 +29,59 @@
     "pdf",
     "notes",
     "sqlite",
-    "knowledge-tree"
-  ]
+    "knowledge-tree",
+    "electron"
+  ],
+  "devDependencies": {
+    "electron": "^45.3.4",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.xisheng.xuanzhai",
+    "productName": "溪声轩斋",
+    "copyright": "MIT",
+    "npmRebuild": false,
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "public/**/*",
+      "electron/**/*",
+      "package.json",
+      "!**/*.map"
+    ],
+    "extraResources": [
+      {
+        "from": "build/icon.ico",
+        "to": "icon.ico"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "溪声轩斋",
+      "artifactName": "XishengXuanzhai-Setup-${version}.${ext}"
+    },
+    "portable": {
+      "artifactName": "XishengXuanzhai-Portable-${version}.${ext}"
+    }
+  }
 }

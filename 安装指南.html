@@ -45,6 +45,15 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 36px 0; }
 <h1>溪声轩斋 · 安装与使用指南（Windows）</h1>
 <blockquote>这份指南写给<strong>完全没配过开发环境</strong>的人。全程只需要装一个软件、点几下鼠标。 预计耗时：10 分钟。</blockquote>
 <hr />
+<h2>零、先选一种装法</h2>
+<table><thead><tr><th></th><th>桌面版（省事）</th><th>源码版（照本文档走）</th></tr></thead><tbody><tr><td>要装 Node.js 吗</td><td><strong>不用</strong></td><td>要</td></tr><tr><td>启动方式</td><td>双击图标</td><td>双击 <code>start.bat</code>，再用浏览器</td></tr><tr><td>适合谁</td><td>只想读书、写笔记</td><td>想改代码、或系统不是 Windows</td></tr><tr><td>数据在哪</td><td><code>%APPDATA%\Xisheng\data</code></td><td>项目文件夹里的 <code>data\</code></td></tr></tbody></table>
+<p><strong>选桌面版就别看第二、三、四节了</strong>，直接：</p>
+<ol><li>下载 <code>XishengXuanzhai-Setup-0.6.0.exe</code>（安装版）或 <code>XishengXuanzhai-Portable-0.6.0.exe</code>（免安装）</li><li>安装版：双击 → 如果弹出「Windows 已保护你的电脑」，点 <strong>更多信息 → 仍要运行</strong></li></ol>
+<p>   （安装包没有买代码签名证书，这是正常提示，不是病毒）</p>
+<ol><li>装完双击桌面上的「溪声轩斋」，出现三栏界面即可</li><li>免安装版：放到任意文件夹双击即可，换电脑拷走这个 exe 也能用</li></ol>
+<blockquote>桌面版和源码版的功能、数据格式完全一样。以后从桌面版换回源码版，把 <code>%APPDATA%\Xisheng\data</code> 整个文件夹复制到项目目录下改名 <code>data</code> 即可。</blockquote>
+<p>下面的第二～四节是<strong>源码版</strong>的安装步骤。</p>
+<hr />
 <h2>一、你需要什么</h2>
 <ul><li>一台 Windows 10 或 Windows 11 电脑</li><li>约 200 MB 空闲磁盘</li><li>能上网（只有装 Node.js 和下载时需要）</li></ul>
 <p><strong>不需要</strong>：会编程、会命令行、会配置数据库、买服务器。</p>
@@ -87,17 +96,20 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 36px 0; }
 <p>密钥只保存在你自己电脑的 <code>data\app.db</code> 里，不会上传到别处。</p>
 <hr />
 <h2>七、数据在哪、怎么备份</h2>
-<p>所有数据都在项目目录的 <code>data\</code> 文件夹里：</p>
+<p>所有数据都在一个 <code>data</code> 文件夹里：</p>
 <pre><code>data\
 ├─ app.db          数据库（文献信息、笔记、标注）
 ├─ storage\        PDF 原文
 └─ backups\        自动备份（每天一份，保留 10 份）</code></pre>
+<p>位置取决于装法：</p>
+<ul><li><strong>源码版</strong>：项目目录下的 <code>data\</code></li><li><strong>桌面版</strong>：<code>C:\Users\&lt;你的用户名&gt;\AppData\Roaming\Xisheng\data</code></li></ul>
+<p>  （在文件管理器地址栏粘贴 <code>%APPDATA%\Xisheng\data</code> 就能打开）</p>
 <p><strong>备份</strong>：把整个 <code>data</code> 文件夹复制到别处即可（U 盘、网盘）。</p>
-<p><strong>换电脑</strong>：新电脑装好 Node.js，把整个项目文件夹拷过去，双击 <code>start.bat</code>。</p>
+<p><strong>换电脑</strong>：源码版装好 Node.js 后拷整个项目文件夹；桌面版拷 <code>data</code> 文件夹到新机器的同一位置。</p>
 <p><strong>恢复</strong>：用备份的 <code>data</code> 文件夹覆盖回去。</p>
 <hr />
 <h2>八、出问题怎么办</h2>
-<table><thead><tr><th>现象</th><th>原因</th><th>处理</th></tr></thead><tbody><tr><td>双击 <code>start.bat</code> 窗口一闪就没了</td><td>缺 Node.js 或文件不完整</td><td>窗口会停留提示，看清红字；仍不行跑 <code>doctor.bat</code></td></tr><tr><td>网页显示「无法访问此网站」</td><td>服务没起来，或浏览器开得太早</td><td>看黑色窗口里有没有报错；重新双击 <code>start.bat</code></td></tr><tr><td>提示 <code>EADDRINUSE</code> / 端口被占用</td><td>已经开着一个实例</td><td>直接访问 <a href="http://127.0.0.1:5178" target="_blank" rel="noreferrer">http://127.0.0.1:5178</a>，或关掉旧窗口</td></tr><tr><td><code>node</code> 不是内部或外部命令</td><td>Node.js 没装好或没加进 PATH</td><td>重装 Node.js，勾选 Add to PATH，然后重启</td></tr><tr><td>浏览器打开是空白页</td><td>浏览器太旧</td><td>用 Edge 或 Chrome 最新版</td></tr><tr><td>杀毒软件报警</td><td>本地服务被误判</td><td>选择「允许」；程序不联网上传任何数据</td></tr><tr><td>PDF 显示不出来</td><td>文件损坏或加密</td><td>换一个 PDF 试试</td></tr><tr><td>中文路径下启动报错</td><td>路径编码问题</td><td>把文件夹移到 <code>D:\Xisheng</code> 这类纯英文路径</td></tr></tbody></table>
+<table><thead><tr><th>现象</th><th>原因</th><th>处理</th></tr></thead><tbody><tr><td>双击 <code>start.bat</code> 窗口一闪就没了</td><td>缺 Node.js 或文件不完整</td><td>窗口会停留提示，看清红字；仍不行跑 <code>doctor.bat</code></td></tr><tr><td>网页显示「无法访问此网站」</td><td>服务没起来，或浏览器开得太早</td><td>看黑色窗口里有没有报错；重新双击 <code>start.bat</code></td></tr><tr><td>提示 <code>EADDRINUSE</code> / 端口被占用</td><td>已经开着一个实例</td><td>现在会自动往后找空端口（5179–5188）；想固定：<code>set PORT=5179</code></td></tr><tr><td>桌面版双击后弹「已保护你的电脑」</td><td>安装包没有代码签名</td><td>点「更多信息 → 仍要运行」</td></tr><tr><td>桌面版双击没反应</td><td>上一次没退干净，或安装目录被拦</td><td>任务管理器结束「溪声轩斋」再开；仍不行重装</td></tr><tr><td><code>node</code> 不是内部或外部命令</td><td>Node.js 没装好或没加进 PATH</td><td>重装 Node.js，勾选 Add to PATH，然后重启</td></tr><tr><td>浏览器打开是空白页</td><td>浏览器太旧</td><td>用 Edge 或 Chrome 最新版</td></tr><tr><td>杀毒软件报警</td><td>本地服务被误判</td><td>选择「允许」；程序不联网上传任何数据</td></tr><tr><td>PDF 显示不出来</td><td>文件损坏或加密</td><td>换一个 PDF 试试</td></tr><tr><td>中文路径下启动报错</td><td>路径编码问题</td><td>把文件夹移到 <code>D:\Xisheng</code> 这类纯英文路径</td></tr></tbody></table>
 <h3>看不懂报错时</h3>
 <p>双击 <strong><code>doctor.bat</code></strong>，它会列出：Node 版本、关键文件是否齐全、数据目录能否写入、数据库状态、端口占用情况。</p>
 <p>把整屏内容截图发给开发者即可定位。</p>
@@ -111,6 +123,10 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 36px 0; }
 <p><strong>Q：数据会不会丢？</strong> A：程序每天自动备份到 <code>data\backups</code>，保留 10 份。但删除操作不可撤销，重要内容请另外备份。</p>
 <hr />
 <h2>十、一页速查</h2>
+<p><strong>桌面版</strong></p>
+<pre><code>装 Setup.exe → 双击桌面图标 → 就是那个三栏界面
+（数据在 %APPDATA%\Xisheng\data，卸载=设置→应用→卸载）</code></pre>
+<p><strong>源码版</strong></p>
 <pre><code>装 Node.js  →  解压到纯英文路径  →  双击 start.bat  →  浏览器自动打开
                                         ↓
                               黑窗口别关，关了服务就停</code></pre>
