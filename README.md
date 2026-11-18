@@ -84,12 +84,14 @@ Zotero 适合**收集**文献，但不适合**组织**知识；Obsidian 适合**
 
 | 文件 | 说明 | 大小 |
 |---|---|---|
-| `XishengXuanzhai-Setup-0.6.0.exe` | 安装到本机，开始菜单 / 桌面快捷方式，双击即用 | ~116 MB |
-| `XishengXuanzhai-Portable-0.6.0.exe` | 免安装，拷到 U 盘就能跑 | ~106 MB |
+| `XishengXuanzhai-0.6.0-win64.zip` | **推荐**：解压后双击 `溪声轩斋.exe`，不走安装器 | ~151 MB |
+| `XishengXuanzhai-Setup-0.6.0.exe` | 安装到本机，开始菜单 / 桌面快捷方式 | ~116 MB |
+| `XishengXuanzhai-Portable-0.6.0.exe` | 免安装单文件，每次启动自解压 | ~106 MB |
 
 - 不需要装 Node，也不占一个浏览器标签页；关窗口就是退出
 - 数据在 `%APPDATA%\Xisheng\data`（可从窗口标题栏的 ⚙ 看到实际路径）
 - 首次运行 Windows 可能弹「已保护你的电脑」→ **更多信息 → 仍要运行**。安装包没做代码签名
+- 安装器若报 `Error writing temporary file`：中文用户名下 NSIS 建临时目录会失败，**换 zip 版**
 
 **B. 源码版**（想改代码、或不是 Windows 选这个）—— 见下面的「从源码运行」。
 

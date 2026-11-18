@@ -47,10 +47,15 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 36px 0; }
 <hr />
 <h2>零、先选一种装法</h2>
 <table><thead><tr><th></th><th>桌面版（省事）</th><th>源码版（照本文档走）</th></tr></thead><tbody><tr><td>要装 Node.js 吗</td><td><strong>不用</strong></td><td>要</td></tr><tr><td>启动方式</td><td>双击图标</td><td>双击 <code>start.bat</code>，再用浏览器</td></tr><tr><td>适合谁</td><td>只想读书、写笔记</td><td>想改代码、或系统不是 Windows</td></tr><tr><td>数据在哪</td><td><code>%APPDATA%\Xisheng\data</code></td><td>项目文件夹里的 <code>data\</code></td></tr></tbody></table>
-<p><strong>选桌面版就别看第二、三、四节了</strong>，直接：</p>
-<ol><li>下载 <code>XishengXuanzhai-Setup-0.6.0.exe</code>（安装版）或 <code>XishengXuanzhai-Portable-0.6.0.exe</code>（免安装）</li><li>安装版：双击 → 如果弹出「Windows 已保护你的电脑」，点 <strong>更多信息 → 仍要运行</strong></li></ol>
-<p>   （安装包没有买代码签名证书，这是正常提示，不是病毒）</p>
-<ol><li>装完双击桌面上的「溪声轩斋」，出现三栏界面即可</li><li>免安装版：放到任意文件夹双击即可，换电脑拷走这个 exe 也能用</li></ol>
+<p><strong>选桌面版就别看第二、三、四节了。</strong> 三个文件，从前往后试：</p>
+<table><thead><tr><th>文件</th><th>什么时候用</th></tr></thead><tbody><tr><td><code>XishengXuanzhai-0.6.0-win64.zip</code></td><td><strong>推荐</strong>。解压到任意文件夹，双击里面的 <code>溪声轩斋.exe</code></td></tr><tr><td><code>XishengXuanzhai-Setup-0.6.0.exe</code></td><td>想装进开始菜单 / 桌面快捷方式</td></tr><tr><td><code>XishengXuanzhai-Portable-0.6.0.exe</code></td><td>拷到 U 盘带走，但每次启动都要自解压，最慢</td></tr></tbody></table>
+<p>两个可能遇到的提示，都是正常现象：</p>
+<ul><li><strong>「Windows 已保护你的电脑」</strong> → 点 <strong>更多信息</strong> → <strong>仍要运行</strong>。</li></ul>
+<p>  安装包没有买代码签名证书，Windows 对陌生 exe 一律这样提示，不是病毒。</p>
+<ul><li><strong>「Error writing temporary file. Make sure your temp folder is valid.」</strong></li></ul>
+<p>  → 说明你的 Windows 用户名是中文（比如 <code>C:\Users\王明瀚\</code>），安装器在临时目录里建文件失败。   <strong>直接换 zip 版</strong>，它不经过安装器。实在想用安装版：把 exe 复制到 <code>C:\Temp\</code>，再执行</p>
+<p>  ``<code>   cmd /c &quot;set TEMP=C:\Temp&amp;&amp; set TMP=C:\Temp&amp;&amp; start &quot;&quot; C:\Temp\Setup.exe&quot;   </code>``</p>
+<blockquote>不想每次都看到提示：解压后在 PowerShell 里跑 <code>Get-ChildItem -Recurse . | Unblock-File</code>， 去掉浏览器给文件打的「来自网络」标记。</blockquote>
 <blockquote>桌面版和源码版的功能、数据格式完全一样。以后从桌面版换回源码版，把 <code>%APPDATA%\Xisheng\data</code> 整个文件夹复制到项目目录下改名 <code>data</code> 即可。</blockquote>
 <p>下面的第二～四节是<strong>源码版</strong>的安装步骤。</p>
 <hr />
