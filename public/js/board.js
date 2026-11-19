@@ -104,12 +104,12 @@ async function loadMap(id) {
   state.selected = null;
   state.linking = null;
 
-  if (!state.papers.length) {
-    try {
-      const { items } = await req('/api/papers');
-      state.papers = items;
-    } catch { /* 没有文献也能用 */ }
-  }
+  // 每次打开/切换拼图都重新拉一次：以前只在本页首次加载时拉，导入新文献后
+  // 拼图的「关联文献」列表还是旧快照，看起来就像新文献不见了。
+  try {
+    const { items } = await req('/api/papers');
+    state.papers = items;
+  } catch { /* 没有文献也能用 */ }
 
   $('#boardMapSelect').value = String(id);
   render();
@@ -221,13 +221,13 @@ function renderSide() {
     .map((b) => `<option value="${b.id}" ${card.branch_id === b.id ? 'selected' : ''}>${esc(b.name)}</option>`)
     .join('');
 
-  const paperOptions = state.papers
-    .map((p) => `<option value="${p.id}" ${card.paper_id === p.id ? 'selected' : ''}>${esc(String(p.title).slice(0, 60))}</option>`)
-    .join('');
+  const paperOptions = paperOptionsHtml('', card.paper_id);
 
   box.innerHTML = `
     <div class="bs-group">
       <label class="bs-label">关联文献</label>
+      <input type="search" id="bsPaperQ" class="bs-input" placeholder="搜索标题 / 作者 / 年份" autocomplete="off" spellcheck="false">
+      <div class="bs-count" id="bsPaperCount">共 ${state.papers.length} 篇</div>
       <select data-f="paper" class="bs-input">
         <option value="">（不关联）</option>
         ${paperOptions}
@@ -287,6 +287,26 @@ function bindBranchList() {
   });
 }
 
+/** 生成「关联文献」下拉项。带 query 时按标题/作者/年份模糊过滤。 */
+function paperOptionsHtml(query, selectedId) {
+  const q = String(query || '').trim().toLowerCase();
+  const all = state.papers || [];
+  let list = q
+    ? all.filter((p) => `${p.title || ''} ${p.authors || ''} ${p.year || ''}`.toLowerCase().includes(q))
+    : all;
+  const capped = q && list.length > 200;
+  list = list.slice(0, 200);
+  // 当前已关联的文献始终保留在下拉里，否则过滤后看起来像“关联丢了”
+  if (selectedId && !list.some((p) => p.id === selectedId)) {
+    const cur = all.find((p) => p.id === selectedId);
+    if (cur) list = [cur, ...list];
+  }
+  return list.map((p) => {
+    const label = `${String(p.title || '').slice(0, 60)}${p.year ? ` · ${p.year}` : ''}`;
+    return `<option value="${p.id}" ${p.id === selectedId ? 'selected' : ''}>${esc(label)}</option>`;
+  }).join('') + (capped ? `<option value="" disabled>—— 只显示前 200 条，再输入几个字缩小范围 ——</option>` : '');
+}
+
 function bindCardEditor(card) {
   const apply = (fields, local) => {
     Object.assign(card, local);
@@ -316,6 +336,33 @@ function bindCardEditor(card) {
     const id = Number(e.target.value) || null;
     apply({ paperId: id }, { paper_id: id });
   };
+
+  // 关联文献搜索：输入即时过滤下拉选项，不影响已选中的文献
+  const qEl = $('#bsPaperQ');
+  const selEl = $('[data-f="paper"]');
+  const countEl = $('#bsPaperCount');
+  if (qEl && selEl) {
+    qEl.oninput = () => {
+      const current = Number(selEl.value) || null;
+      selEl.innerHTML = '<option value="">（不关联）</option>' + paperOptionsHtml(qEl.value, current);
+      if (countEl) {
+        const q = qEl.value.trim();
+        const hit = q
+          ? (state.papers || []).filter((p) => `${p.title || ''} ${p.authors || ''} ${p.year || ''}`.toLowerCase().includes(q.toLowerCase())).length
+          : (state.papers || []).length;
+        countEl.textContent = q ? `匹配 ${hit} 篇` : `共 ${hit} 篇`;
+      }
+    };
+    qEl.onkeydown = (e) => {
+      // 回车直接选中过滤后的第一篇，免得再点一次下拉
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      const first = selEl.querySelector('option[value]:not([value=""])');
+      if (!first) return;
+      selEl.value = first.value;
+      selEl.onchange({ target: selEl });
+    };
+  }
 
   $('[data-f="branch"]').onchange = (e) => {
     const id = Number(e.target.value) || null;

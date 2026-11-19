@@ -21,14 +21,21 @@ const dup = idList.filter((id, i) => idList.indexOf(id) !== i);
 if (dup.length) problems.push(`index.html 存在重复 id：${[...new Set(dup)].join(', ')}`);
 const ids = new Set(idList);
 
-// 2. JS → DOM id
+// 2. JS 模板里自己创建的 id（例如拼图侧栏的 #bsPaperQ）也算合法目标
+const jsIds = new Set();
+for (const f of files) {
+  const src = fs.readFileSync(path.join(jsDir, f), 'utf8');
+  for (const m of src.matchAll(/\bid="([A-Za-z0-9_-]+)"/g)) jsIds.add(m[1]);
+}
+
+// 3. JS → DOM id
 for (const f of files) {
   const src = fs.readFileSync(path.join(jsDir, f), 'utf8');
   const used = new Set([...src.matchAll(/\$\('#([A-Za-z0-9_-]+)'\)/g)].map((m) => m[1]));
-  const missing = [...used].filter((id) => !ids.has(id));
+  const missing = [...used].filter((id) => !ids.has(id) && !jsIds.has(id));
   if (missing.length) problems.push(`${f} 引用了不存在的 id：${missing.join(', ')}`);
 
-  // 3. 相对 import
+  // 4. 相对 import
   for (const m of src.matchAll(/from '(\.[^']+)'/g)) {
     if (!fs.existsSync(path.resolve(jsDir, m[1]))) {
       problems.push(`${f} 的 import 找不到：${m[1]}`);
