@@ -54,8 +54,9 @@ async function once(messages, { temperature, maxTokens, model, timeout, thinking
   }
 
   const data = await resp.json();
-  const content = data.choices?.[0]?.message?.content?.trim() || '';
-  return { content, usage: data.usage || null, model: data.model || model };
+  const trimmed = data.choices?.[0]?.message?.content?.trim() || '';
+  const finish = data.choices?.[0]?.finish_reason || null;
+  return { content: trimmed, usage: data.usage || null, model: data.model || model, finish };
 }
 
 async function chat(messages, opts = {}) {
@@ -90,12 +91,29 @@ const SYSTEM_PROMPT = [
   '局限：短篇收益较小，依赖上游抽取质量',
 ].join('\n');
 
-/** 超长时保留开头和结尾：方法多在前面，局限常写在讨论/结论里 */
+/**
+ * 超长时按「头 / 中 / 尾」分层取样，而不是只留开头结尾：
+ * 引言交代问题，中段是方法与实验，尾部是讨论与局限 —— 三段都看一眼，
+ * 本机 8k 字符的预算才不至于把结论整段丢掉。
+ */
 function clipBody(text, maxChars = 60000) {
   if (text.length <= maxChars) return text;
-  const head = Math.floor(maxChars * 0.7);
-  const tail = maxChars - head;
-  return `${text.slice(0, head)}\n……（中间略去 ${text.length - maxChars} 字）……\n${text.slice(-tail)}`;
+
+  const head = Math.round(maxChars * 0.5);
+  const mid = Math.round(maxChars * 0.3);
+  const tail = maxChars - head - mid;
+  const midStart = Math.round((text.length - mid) / 2);
+
+  const gap1 = midStart - head;
+  const gap2 = text.length - tail - (midStart + mid);
+
+  return [
+    text.slice(0, head),
+    `\n……（此处略去 ${Math.max(0, gap1)} 字）……\n`,
+    text.slice(midStart, midStart + mid),
+    `\n……（此处略去 ${Math.max(0, gap2)} 字）……\n`,
+    text.slice(-tail),
+  ].join('');
 }
 
 async function summarise({ title, abstract, venue, year, body }) {
@@ -110,8 +128,9 @@ async function summarise({ title, abstract, venue, year, body }) {
   const localLimit = Math.max(2000, Number(process.env.XISHENG_AI_MAXCHARS) || 8000);
   const limit = isLocalEndpoint(resolveBaseUrl()) ? localLimit : 60000;
 
+  const taken = body ? clipBody(body, limit) : '';
   const user = body
-    ? `${head}\n\n正文开始\n${clipBody(body, limit)}\n正文结束`
+    ? `${head}\n\n正文开始\n${taken}\n正文结束`
     : `${head}\n\n${abstract ? `摘要：${abstract}` : '（没有正文，也没有摘要，仅根据标题作答，并说明信息不足）'}`;
 
   const r = await chat([
@@ -119,7 +138,19 @@ async function summarise({ title, abstract, venue, year, body }) {
     { role: 'user', content: user },
   ], { maxTokens: 400, temperature: 0.15, thinking: 'disabled' });
 
-  return { ...r, scope: body ? 'fulltext' : 'abstract' };
+  // 思考型模型（qwen3 之类）会把 max_tokens 全花在 reasoning 上，正文为空。
+  // 这种情况不能把空摘要写进库里，得让用户看到原因。
+  if (!r.content) {
+    const why = r.finish === 'length'
+      ? '模型把输出额度全用在内部思考上了（qwen3 这类思考型模型），正文一个字都没写出来'
+      : '模型返回了空内容';
+    const err = new LlmError(`${why}。换成本机非思考模型（如 qwen2.5:7b-instruct-q4_K_M）再试`, 502);
+    throw err;
+  }
+
+  // 送进去的是节选就得如实标注，别让「全文」两个字变成谎话
+  const scope = !body ? 'abstract' : (taken.length < body.length ? 'fulltext-partial' : 'fulltext');
+  return { ...r, scope, sentChars: taken.length, totalChars: body ? body.length : 0 };
 }
 
 /** 目标语言 → 提示词里的名字。没列的语言按码原样塞进去，模型自己会认 */
@@ -148,6 +179,11 @@ async function translate(text, { target = 'zh' } = {}) {
     { role: 'system', content: translateSystem(target) },
     { role: 'user', content: t },
   ], { maxTokens: 900, temperature: 0.2, timeout: 45000, thinking: 'disabled' });
+
+  // 思考型模型会把额度烧在 reasoning 上，译文为空 —— 不能把空串当成功返回
+  if (!r.content) {
+    throw new LlmError('模型没给出译文（思考型模型会把输出额度耗在内部推理上），换 qwen2.5 这类非思考模型再试', 502);
+  }
 
   return { text: t, translation: r.content, model: r.model, usage: r.usage };
 }

@@ -102,17 +102,23 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 36px 0; }
 <ol><li>打开 <a href="https://platform.deepseek.com" target="_blank" rel="noreferrer">https://platform.deepseek.com</a> 注册并登录</li><li>左侧「API Keys」→ 创建，复制那串 <code>sk-</code> 开头的密钥</li><li>回到应用，点右上角 <strong>⚙</strong>，服务预设选「DeepSeek」</li><li>粘贴密钥 → 点「测试连接」→ 显示正常后点「保存」</li></ol>
 <p>成本：每篇论文约 ¥0.02（读全文生成四段摘要）。 不想花钱的话，预设里选「硅基流动」，注册送额度，模型填 <code>Qwen/Qwen2.5-7B-Instruct</code>。</p>
 <h3>路线 B：本机免费（不联网、不花钱，但慢）</h3>
-<ol><li>打开 <a href="https://ollama.com/download" target="_blank" rel="noreferrer">https://ollama.com/download</a> 下载 Windows 版并安装</li><li>打开「命令提示符」，运行 <code>ollama pull qwen2.5:7b-instruct-q4_K_M</code>（约 4.7 GB，一次就好；</li></ol>
+<ol><li>打开 <a href="https://ollama.com/download" target="_blank" rel="noreferrer">https://ollama.com/download</a> 下载 Windows 版并安装（装完有个「ollama」托盘图标）。</li></ol>
+<p>   它默认把模型放在 C 盘，模型动辄 5 GB；C 盘紧张就先设一个环境变量再下载：</p>
+<p>   ``<code>    setx OLLAMA_MODELS &quot;E:\Ollama\models&quot;    </code>``</p>
+<p>   （换成你想放的盘；设完要重新打开命令行 / 重新启动 Ollama 才生效）</p>
+<ol><li>拉模型：<code>ollama pull qwen2.5:7b-instruct-q4_K_M</code>（约 4.7 GB，一次就好；</li></ol>
 <p>   显存或内存紧张就换 <code>qwen2.5:3b</code>，约 2 GB）</p>
-<ol><li><strong>关键一步</strong>：Ollama 默认只给 4k 上下文，长篇论文会被截断到中段，模型就开始瞎编。</li></ol>
-<p>   在仓库根目录执行下面两条，做一个上下文 16k 的包装模型：</p>
-<p>   ``<code>    ollama create xisheng-qwen:7b -f scripts/ollama/Modelfile    </code>``</p>
-<p>   （用 3b 的话，先把 <code>scripts/ollama/Modelfile</code> 第一行的 <code>FROM</code> 改成 <code>qwen2.5:3b</code>，    名字也换成 <code>xisheng-qwen:3b</code>）</p>
-<ol><li>回到应用 ⚙，服务预设选「Ollama 本机」，模型填 <code>xisheng-qwen:7b</code></li><li><strong>Key 留空</strong>，点「测试连接」→ 显示正常后点保存</li></ol>
-<p>实测（RTX 3050 Laptop 4 GB 显存 + 7B Q4）：一篇摘要 12–25 秒； 纯 CPU 会到 1–3 分钟。它读的是正文前 8000 字，够抓住问题、方法、结论， 但不如云端模型细。想让本机模型读更多：</p>
+<p>   &gt; <strong>别选 qwen3 这类「思考型」模型。</strong> 它会把输出额度全花在内部推理上，    &gt; 摘要和译文都是空的。应用会直接提示你换模型，不会把空内容写进库里。</p>
+<ol><li>让 Ollama 的上下文够大。它默认只给 4k，长篇论文会被截断到中段、模型开始瞎编。</li></ol>
+<p>   用托盘图标启动的，先退出 Ollama，再用命令行启动一次：</p>
+<p>   ``<code>    set OLLAMA_CONTEXT_LENGTH=16384    ollama serve    </code>``</p>
+<p>   （这条窗口要一直开着。想固定下来就用 <code>setx OLLAMA_CONTEXT_LENGTH 16384</code>，    或者按 <code>scripts/ollama/Modelfile</code> 做一个 16k 的包装模型，二选一。）</p>
+<ol><li>回到应用 ⚙ → 服务预设选「Ollama 本机」→ 模型填 <code>qwen2.5:7b-instruct-q4_K_M</code></li><li><strong>Key 留空</strong>，点「测试连接」→ 显示正常后点保存</li></ol>
+<p>实测（RTX 3050 Laptop 4 GB 显存 + 7B Q4）：一篇摘要 9–25 秒，划词翻译 2–5 秒； 纯 CPU 会到 1–3 分钟。它读的是正文的<strong>头 / 中 / 尾三段节选</strong>（默认 8000 字）， 够抓住问题、方法、结论，但不如云端模型细；界面标签会写明「全文节选 8.0k 字」。</p>
+<p>想让本机模型读更多（同时把 Ollama 上下文和应用的送字上限都调大）：</p>
 <pre><code>set OLLAMA_CONTEXT_LENGTH=32768
 set XISHENG_AI_MAXCHARS=24000</code></pre>
-<p>（第一条给 Ollama 调上下文，第二条给应用调送进去的字数上限；改完要先关掉、重新打开这两个程序）</p>
+<p>（改完要关掉、重新打开这两个程序）</p>
 <p>密钥只保存在你自己电脑的 <code>data\app.db</code> 里，不会上传到别处。</p>
 <hr />
 <h2>七、数据在哪、怎么备份</h2>

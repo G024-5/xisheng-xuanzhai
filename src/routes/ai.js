@@ -27,17 +27,19 @@ async function summary(req, res) {
     const r = await llm.summarise({ ...paper, body: full?.text || null });
 
     db.prepare(`
-      INSERT INTO ai_summaries (paper_id, tldr, model, scope) VALUES (?, ?, ?, ?)
+      INSERT INTO ai_summaries (paper_id, tldr, model, scope, sent_chars) VALUES (?, ?, ?, ?, ?)
       ON CONFLICT(paper_id) DO UPDATE SET
         tldr = excluded.tldr, model = excluded.model, scope = excluded.scope,
-        created_at = datetime('now')
-    `).run(id, r.content, r.model, r.scope);
+        sent_chars = excluded.sent_chars, created_at = datetime('now')
+    `).run(id, r.content, r.model, r.scope, r.sentChars || null);
 
     return sendJson(res, 200, {
       tldr: r.content,
       model: r.model,
       scope: r.scope,
       chars: full?.chars || 0,
+      sentChars: r.sentChars || 0,
+      totalChars: r.totalChars || 0,
       usage: r.usage,
     });
   } catch (e) {

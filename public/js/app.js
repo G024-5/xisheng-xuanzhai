@@ -15,6 +15,20 @@ const state = {
   settings: { ai: { hasKey: false, model: 'deepseek-flash' } },
 };
 
+/**
+ * 摘要的范围标签。本机模型只吃得下几千字，那时送进去的是节选，
+ * 标签就必须写「全文节选」，不能让用户以为模型真的读完了全篇。
+ */
+const SCOPE_LABEL = { fulltext: '全文', 'fulltext-partial': '全文节选', abstract: '摘要' };
+
+function scopeLabel(scope, sentChars) {
+  const base = SCOPE_LABEL[scope] || '摘要';
+  if (scope === 'fulltext-partial' && sentChars) {
+    return `${base} ${(sentChars / 1000).toFixed(1)}k 字`;
+  }
+  return base;
+}
+
 /* ==================== 侧栏 ==================== */
 
 function renderStats(stats) {
@@ -196,7 +210,7 @@ async function openPaper(id) {
   $('#noteStatus').textContent = p.note?.updated_at ? '已保存' : '';
 
   if (p.summary?.tldr) {
-    const scope = p.summary.scope === 'fulltext' ? '全文' : '摘要';
+    const scope = scopeLabel(p.summary.scope, p.summary.sent_chars);
     $('#aiBox').hidden = false;
     $('#aiBox').innerHTML = `<span class="ai-tag">AI 摘要 · ${scope} · ${esc(p.summary.model || '')}</span>${esc(p.summary.tldr)}`;
   } else {
@@ -527,13 +541,13 @@ function isLocalBase(url) {
 /* 常见服务预设：选一下就自动填好地址和模型，省得用户查文档 */
 const PRESETS = {
   deepseek: { baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-flash', key: 'https://platform.deepseek.com/api_keys' },
-  // 本机模型：先用 scripts/ollama/Modelfile 建一个 16k 上下文的包装模型，
-  // 否则 Ollama 默认 4k 会把正文截断，摘要就开始瞎编
+  // 本机模型：推荐 qwen2.5 系列的指令模型。qwen3 这类思考型模型会把输出额度
+  // 烧在内部推理上，摘要正文为空，前端会直接报错。
   ollama: {
     baseUrl: 'http://127.0.0.1:11434/v1',
-    model: 'xisheng-qwen:7b',
+    model: 'qwen2.5:7b-instruct-q4_K_M',
     key: '',
-    hint: '本机服务不用 Key。先在命令行跑 ollama create xisheng-qwen:7b -f scripts/ollama/Modelfile（详见安装指南）。',
+    hint: '本机服务不用 Key。先装 Ollama 并执行 ollama pull qwen2.5:7b-instruct-q4_K_M，再启动 ollama serve（详见安装指南）。',
   },
   lmstudio: { baseUrl: 'http://127.0.0.1:1234/v1', model: 'qwen2.5-7b-instruct', key: '' },
   siliconflow: { baseUrl: 'https://api.siliconflow.cn/v1', model: 'Qwen/Qwen2.5-7B-Instruct', key: 'https://cloud.siliconflow.cn/account/ak' },
@@ -725,8 +739,8 @@ $('#note').addEventListener('input', () => {
 
 $('#btnAi').addEventListener('click', async () => {
   if (!state.selectedId) return;
-  if (!state.settings.ai.hasKey) {
-    toast('先在右上角 ⚙ 里配置 API Key');
+  if (!state.settings.ai.ready) {
+    toast('先配置模型：云端填 Key，本机填 Ollama 地址即可');
     openSettings();
     return;
   }
@@ -740,7 +754,7 @@ $('#btnAi').addEventListener('click', async () => {
 
   try {
     const r = await api.summarize(state.selectedId);
-    const scope = r.scope === 'fulltext' ? '全文' : '摘要';
+    const scope = scopeLabel(r.scope, r.sentChars);
     box.innerHTML = `<span class="ai-tag">AI 摘要 · ${scope} · ${esc(r.model)}</span>${esc(r.tldr)}`;
   } catch (err) {
     box.innerHTML = `<span class="ai-tag">AI</span>失败：${esc(err.message)}`;
