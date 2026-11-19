@@ -150,13 +150,18 @@ node scripts/import-zotero.js "C:\Users\<你>\Zotero"
 |---|---|---|---|
 | DeepSeek | `https://api.deepseek.com/v1` | `deepseek-flash` | 约 ¥0.017/篇 |
 | 硅基流动 | `https://api.siliconflow.cn/v1` | `Qwen/Qwen2.5-7B-Instruct` | 有免费额度 |
-| 本机 Ollama | `http://127.0.0.1:11434/v1` | `qwen2.5:3b` | 免费，但慢 |
+| 本机 Ollama | `http://127.0.0.1:11434/v1` | `xisheng-qwen:7b` | 免费，一篇 10–25 秒 |
 | LM Studio | `http://127.0.0.1:1234/v1` | 看你加载了什么 | 免费 |
 
 本机服务（127.0.0.1 / localhost）不需要填 Key。
 
+用 Ollama 的话多做一步：它的默认上下文只有 4k，长篇论文会被截断到中段、模型开始瞎编。
+执行 `ollama create xisheng-qwen:7b -f scripts/ollama/Modelfile` 把上下文抬到 16k 再用
+（细节见 [安装指南](docs/安装指南.md) 第六节）。
+
 Key 只存在本机 `data/app.db`，除发往你配置的 API 地址外不会发往任何地方。
-摘要一次约 1.6 万 tokens（全文），成本约 ¥0.017/篇。
+云端摘要一次约 1.6 万 tokens（全文），成本约 ¥0.017/篇；本机模型只读正文前 8000 字，
+设 `XISHENG_AI_MAXCHARS` 可放宽。
 
 ## 数据与备份
 

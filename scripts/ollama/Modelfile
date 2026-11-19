@@ -1,0 +1,16 @@
+#
+# 给本机 Ollama 用的模型包装：把上下文从默认 4k 抬到 16k。
+# 默认 4k 时，一篇论文塞进去会被截断，模型只看到中段，摘要容易开始瞎编。
+#
+# 用法（在仓库根目录）：
+#   ollama pull qwen2.5:7b-instruct-q4_K_M
+#   ollama create xisheng-qwen:7b -f scripts/ollama/Modelfile
+# 然后在「设置」里模型填 xisheng-qwen:7b，接口地址填 http://127.0.0.1:11434/v1，Key 留空。
+#
+# 显存 4G 左右可以换成 3b，速度更快、质量弱一档：
+#   FROM qwen2.5:3b
+FROM qwen2.5:7b-instruct-q4_K_M
+
+PARAMETER num_ctx 16384
+PARAMETER temperature 0.2
+PARAMETER top_p 0.9

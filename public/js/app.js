@@ -527,7 +527,14 @@ function isLocalBase(url) {
 /* 常见服务预设：选一下就自动填好地址和模型，省得用户查文档 */
 const PRESETS = {
   deepseek: { baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-flash', key: 'https://platform.deepseek.com/api_keys' },
-  ollama: { baseUrl: 'http://127.0.0.1:11434/v1', model: 'qwen2.5:3b', key: '' },
+  // 本机模型：先用 scripts/ollama/Modelfile 建一个 16k 上下文的包装模型，
+  // 否则 Ollama 默认 4k 会把正文截断，摘要就开始瞎编
+  ollama: {
+    baseUrl: 'http://127.0.0.1:11434/v1',
+    model: 'xisheng-qwen:7b',
+    key: '',
+    hint: '本机服务不用 Key。先在命令行跑 ollama create xisheng-qwen:7b -f scripts/ollama/Modelfile（详见安装指南）。',
+  },
   lmstudio: { baseUrl: 'http://127.0.0.1:1234/v1', model: 'qwen2.5-7b-instruct', key: '' },
   siliconflow: { baseUrl: 'https://api.siliconflow.cn/v1', model: 'Qwen/Qwen2.5-7B-Instruct', key: 'https://cloud.siliconflow.cn/account/ak' },
   openrouter: { baseUrl: 'https://openrouter.ai/api/v1', model: 'qwen/qwen-2.5-7b-instruct:free', key: 'https://openrouter.ai/keys' },
@@ -538,9 +545,8 @@ $('#setPreset').addEventListener('change', (e) => {
   if (!p) return;
   $('#setBase').value = p.baseUrl;
   $('#setModel').value = p.model;
-  $('#setKeyHint').textContent = p.key
-    ? `到 ${p.key} 申请 Key，粘贴到上面。`
-    : '本机服务不需要 Key，直接保存即可。';
+  $('#setKeyHint').textContent = p.hint
+    || (p.key ? `到 ${p.key} 申请 Key，粘贴到上面。` : '本机服务不需要 Key，直接保存即可。');
 });
 
 // 主题下拉即改即生效
