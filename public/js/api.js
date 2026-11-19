@@ -63,4 +63,10 @@ export const api = {
   testConnection: () => req('/api/settings/test', { method: 'POST' }),
 
   summarize: (paperId) => req('/api/ai/summary', { method: 'POST', body: { paperId } }),
+  translate: (payload) => req('/api/ai/translate', { method: 'POST', body: payload }),
+
+  cite: (paperId, style) => req(`/api/papers/${paperId}/cite?style=${encodeURIComponent(style)}`),
+  citeMany: (ids, style) => req(`/api/cite?ids=${ids.join(',')}&style=${encodeURIComponent(style)}`),
+  saveProgress: (paperId, page, pageCount) =>
+    req(`/api/papers/${paperId}/progress`, { method: 'PUT', body: { page, pageCount } }),
 };

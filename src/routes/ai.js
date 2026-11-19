@@ -1,4 +1,5 @@
 'use strict';
+const crypto = require('node:crypto');
 const { db } = require('../db');
 const llm = require('../services/llm');
 const settings = require('../services/settings');
@@ -7,7 +8,8 @@ const { sendJson, readBody } = require('../util/http');
 
 async function status(_req, res) {
   return sendJson(res, 200, {
-    ready: Boolean(settings.resolveApiKey()),
+    ready: settings.isReady(),
+    local: settings.isLocalEndpoint(settings.resolveBaseUrl()),
     model: settings.resolveModel(),
   });
 }
@@ -43,7 +45,43 @@ async function summary(req, res) {
   }
 }
 
+/**
+ * 划词翻译。同一段文字重复选中时直接吃缓存 —— 读者常反复回看同一句，
+ * 缓存既省钱也省本机显卡。refresh=1 可强制重译。
+ */
+async function translate(req, res) {
+  const body = await readBody(req);
+  const text = String(body.text || '').trim();
+  const target = String(body.target || 'zh').slice(0, 8);
+
+  if (!text) return sendJson(res, 400, { error: '没有可翻译的文字' });
+  if (text.length > 4000) return sendJson(res, 413, { error: '选中的文字太长，请分段翻译（限 4000 字）' });
+
+  // 「看原文」不花一次请求，也不必进缓存
+  if (target === 'original') return sendJson(res, 200, { text, translation: text, model: 'none', cached: true });
+
+  const hash = crypto.createHash('sha256').update(`${target}\n${text}`).digest('hex');
+
+  if (!body.refresh) {
+    const hit = db.prepare('SELECT result, model FROM translations WHERE hash = ?').get(hash);
+    if (hit) return sendJson(res, 200, { text, translation: hit.result, model: hit.model, cached: true });
+  }
+
+  try {
+    const r = await llm.translate(text, { target });
+    db.prepare(`
+      INSERT INTO translations (hash, target, source, result, model) VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(hash) DO UPDATE SET result = excluded.result, model = excluded.model, created_at = datetime('now')
+    `).run(hash, target, text, r.translation, r.model);
+
+    return sendJson(res, 200, { text, translation: r.translation, model: r.model, cached: false });
+  } catch (e) {
+    return sendJson(res, e.status || 500, { error: e.message });
+  }
+}
+
 module.exports = function register(add) {
   add('GET', '/api/ai/status', status);
   add('POST', '/api/ai/summary', summary);
+  add('POST', '/api/ai/translate', translate);
 };

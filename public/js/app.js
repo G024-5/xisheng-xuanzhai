@@ -175,9 +175,14 @@ async function openPaper(id) {
   if (p.has_pdf) {
     $('#pdfEmpty').hidden = true;
     $('#pdfHost').style.display = '';
-    reader.open(id, $('#pdfHost'), { onPageChange: () => {} })
+    progress.reset();
+    reader.open(id, $('#pdfHost'), {
+      startPage: p.progress?.page || 1,
+      onPageChange: (page) => progress.save(id, page),
+    })
       .then((r) => {
         renderAnnotations(reader.getAnnotations());
+        if (r && r.startPage > 1) toast(`接着上次读，已跳到第 ${r.startPage} 页`, 2000);
         if (r && r.fallback) toast('pdf.js 载入失败，已回退到内置阅读器', 2600);
       })
       .catch((err) => console.error(err));
@@ -223,6 +228,241 @@ async function flushNote() {
   }
 }
 
+/* ==================== 主题（夜间模式）==================== */
+
+function applyTheme(mode) {
+  const dark = mode === 'dark';
+  document.documentElement.classList.toggle('dark', dark);
+  try { localStorage.setItem('pd.theme', dark ? 'dark' : 'light'); } catch { /* 隐私模式忽略 */ }
+  const btn = $('#btnTheme');
+  if (btn) {
+    btn.textContent = dark ? '☀' : '◐';
+    btn.title = dark ? '切到浅色（Ctrl+Shift+L）' : '夜间模式（Ctrl+Shift+L）';
+  }
+  const sel = $('#setTheme');
+  if (sel) sel.value = dark ? 'dark' : 'light';
+}
+
+function toggleTheme() {
+  const next = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+  applyTheme(next);
+  api.saveSettings({ theme: next }).catch(() => { /* 后端老版本不支持就算了 */ });
+}
+
+$('#btnTheme').addEventListener('click', toggleTheme);
+
+/* ==================== 阅读进度（防抖落盘）==================== */
+
+const progress = {
+  timer: null,
+  last: 0,
+  reset() {
+    clearTimeout(this.timer);
+    this.last = 0;
+  },
+  save(paperId, page) {
+    if (!paperId || !page || page === this.last) return;
+    clearTimeout(this.timer);
+    this.timer = setTimeout(async () => {
+      this.last = page;
+      try {
+        await api.saveProgress(paperId, page, reader.pageCount());
+      } catch { /* 记住位置是锦上添花，失败了不打扰用户 */ }
+    }, 900);
+  },
+};
+
+/* ==================== PDF 内查找 ==================== */
+
+let findTimer = null;
+
+function openFind() {
+  if (!state.selectedId) return;
+  const hasPdf = $('#pdfHost').querySelector('.pdf-page') || $('#pdfHost').querySelector('.pdf-fallback');
+  if (!hasPdf) { toast('这篇没有 PDF，没法在里面查找'); return; }
+  $('#pdfFind').hidden = false;
+  const input = $('#findInput');
+  input.focus();
+  input.select();
+}
+
+function closeFind() {
+  $('#pdfFind').hidden = true;
+  $('#findInput').value = '';
+  $('#findCount').textContent = '';
+  reader.clearFind();
+}
+
+function syncFindCount(st) {
+  const box = $('#findCount');
+  if (!st) { box.textContent = ''; return; }
+  if (!st.count) { box.textContent = st.query ? '无结果' : ''; return; }
+  box.textContent = `${st.index}/${st.count}`;
+}
+
+$('#btnFind').addEventListener('click', () => {
+  if ($('#pdfFind').hidden) openFind();
+  else closeFind();
+});
+$('#findClose').addEventListener('click', closeFind);
+$('#findPrev').addEventListener('click', async () => syncFindCount(await reader.findStep(-1)));
+$('#findNext').addEventListener('click', async () => syncFindCount(await reader.findStep(1)));
+
+$('#findInput').addEventListener('input', (e) => {
+  clearTimeout(findTimer);
+  const q = e.target.value;
+  findTimer = setTimeout(async () => {
+    if (!q.trim()) { syncFindCount(null); reader.clearFind(); return; }
+    syncFindCount(await reader.find(q));
+  }, 240);
+});
+
+$('#findInput').addEventListener('keydown', async (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    syncFindCount(await reader.findStep(e.shiftKey ? -1 : 1));
+  } else if (e.key === 'Escape') {
+    e.preventDefault();
+    closeFind();
+  }
+});
+
+/* ==================== 划词翻译浮层 ==================== */
+
+function closeTrans() {
+  $('#trPop').hidden = true;
+  $('#trBody').textContent = '';
+  state.trText = '';
+}
+
+function placeTrans(anchor) {
+  const pop = $('#trPop');
+  pop.hidden = false;
+  const w = pop.offsetWidth || 360;
+  const h = pop.offsetHeight || 140;
+  const left = Math.max(10, Math.min(window.innerWidth - w - 10, (anchor?.left || 200) - w / 2));
+  const top = Math.max(10, Math.min(window.innerHeight - h - 10, (anchor?.top || 200) + 12));
+  pop.style.left = `${left}px`;
+  pop.style.top = `${top}px`;
+}
+
+/** 语言标签高亮：只有一个实心 */
+function markLang(target) {
+  $('#trPop').querySelectorAll('.tr-lang').forEach((b) => {
+    b.classList.toggle('on', b.dataset.target === target);
+  });
+}
+
+async function translateSelection(sel, target = 'zh') {
+  // 从工具条进来的用新选区；点语言标签进来的（sel 为 null）用刚翻过的那段
+  const raw = sel ? (sel.quote || '') : (state.trText || '');
+  const text = raw.replace(/\s+/g, ' ').trim().slice(0, 1500);
+  if (!text) return;
+  state.trText = text;
+
+  const pop = $('#trPop');
+  pop.hidden = false;
+  markLang(target);
+  $('#trTitle').textContent = '翻译';
+  $('#trSrc').textContent = text.length > 180 ? `${text.slice(0, 180)}…` : text;
+  $('#trBody').innerHTML = '<span class="tr-loading">翻译中…</span>';
+  if (sel) placeTrans(sel.anchor);
+
+  try {
+    const r = await api.translate({ text, target, page: sel?.page });
+    // 「原文」的 model 是 none，此时标题不该显示模型名
+    $('#trTitle').textContent = r.model && r.model !== 'none'
+      ? `翻译 · ${r.model}${r.cached ? ' · 缓存' : ''}`
+      : '原文';
+    $('#trBody').textContent = r.translation || '';
+    state.lastTranslation = r.translation || '';
+  } catch (err) {
+    $('#trBody').innerHTML = `<span class="tr-loading">失败：${esc(err.message)}</span>`;
+    state.lastTranslation = '';
+  }
+}
+
+$('#trClose').addEventListener('click', closeTrans);
+$('#trPop').addEventListener('click', (e) => {
+  const b = e.target.closest('.tr-lang');
+  if (b) translateSelection(null, b.dataset.target);
+});
+$('#trCopy').addEventListener('click', async () => {
+  if (!state.lastTranslation) return;
+  try {
+    await navigator.clipboard.writeText(state.lastTranslation);
+    toast('已复制');
+  } catch {
+    toast('复制失败，请手动选中');
+  }
+});
+
+/* ==================== 引文（BibTeX / GB/T 7714 / RIS）==================== */
+
+const CITE_STYLES = {
+  bibtex: { label: 'BibTeX', ext: 'bib', hint: '直接粘进 Zotero、Overleaf、JabRef。' },
+  gb: { label: 'GB/T 7714', ext: 'txt', hint: '中文期刊投稿常用的顺序编码制著录格式。' },
+  ris: { label: 'RIS', ext: 'ris', hint: 'EndNote、Mendeley、Zotero 都能导入。' },
+};
+let citeStyle = 'bibtex';
+let citeText = '';
+
+async function openCite() {
+  if (!state.selectedId) return;
+  citeStyle = 'bibtex';
+  $('#citeTabs').querySelectorAll('.tab').forEach((t) => t.classList.toggle('on', t.dataset.style === citeStyle));
+  $('#citeModal').hidden = false;
+  citeText = '';
+  $('#citeText').value = '读取中…';
+  await loadCite();
+}
+
+async function loadCite() {
+  try {
+    const r = await api.cite(state.selectedId, citeStyle);
+    citeText = r.text || '';
+    $('#citeText').value = citeText;
+    $('#citeHint').textContent = `${r.label || CITE_STYLES[citeStyle].label} · ${CITE_STYLES[citeStyle].hint}`;
+  } catch (err) {
+    citeText = '';
+    $('#citeText').value = `生成失败：${err.message}`;
+    $('#citeHint').textContent = '';
+  }
+}
+
+$('#btnCite').addEventListener('click', openCite);
+$('#citeClose').addEventListener('click', () => { $('#citeModal').hidden = true; });
+$('#citeModal').addEventListener('click', (e) => { if (e.target.id === 'citeModal') $('#citeModal').hidden = true; });
+$('#citeTabs').addEventListener('click', async (e) => {
+  const tab = e.target.closest('.tab');
+  if (!tab) return;
+  citeStyle = tab.dataset.style;
+  $('#citeTabs').querySelectorAll('.tab').forEach((t) => t.classList.toggle('on', t === tab));
+  await loadCite();
+});
+
+$('#btnCiteCopy').addEventListener('click', async () => {
+  if (!citeText) return;
+  try {
+    await navigator.clipboard.writeText(citeText);
+    toast('引文已复制');
+  } catch {
+    $('#citeText').select();
+    toast('复制失败，已帮你选中，按 Ctrl+C');
+  }
+});
+
+$('#btnCiteDownload').addEventListener('click', () => {
+  if (!citeText) return;
+  const style = CITE_STYLES[citeStyle];
+  const blob = new Blob([citeText], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  const title = ($('#pTitle').textContent || 'citation').replace(/[\\/:*?"<>|]/g, '').slice(0, 60);
+  a.href = URL.createObjectURL(blob);
+  a.download = `${title}.${style.ext}`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+});
 /* ==================== 知识树操作 ==================== */
 
 async function addNode(parentId, title) {
@@ -264,21 +504,50 @@ async function openSettings() {
 
   $('#setKey').value = '';
   $('#setKey').placeholder = s.ai.hasKey ? `${s.ai.keyMasked}（留空不修改）` : 'sk-...';
+  $('#setModel').value = s.ai.model;
+  $('#setBase').value = s.ai.baseUrl;
+  const local = isLocalBase(s.ai.baseUrl);
   $('#setKeyHint').textContent = s.ai.hasKey
     ? '已配置。留空表示保持不变，输入新值则覆盖。'
-    : '尚未配置，AI 摘要不可用。可在 platform.deepseek.com 申请。';
-
-  const sel = $('#setModel');
-  if (![...sel.options].some((o) => o.value === s.ai.model)) {
-    sel.add(new Option(s.ai.model, s.ai.model));
-  }
-  sel.value = s.ai.model;
-  $('#setBase').value = s.ai.baseUrl;
+    : local
+      ? '本机服务不需要 Key，留空即可。'
+      : '尚未配置，AI 摘要不可用。可在 platform.deepseek.com 申请。';
+  $('#setTheme').value = document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+  $('#setPreset').value = '';
 
   $('#testResult').hidden = true;
   $('#settingsModal').hidden = false;
   $('#setKey').focus();
 }
+
+function isLocalBase(url) {
+  return /^https?:\/\/(127\.0\.0\.1|localhost|0\.0\.0\.0)/.test(url || '');
+}
+
+/* 常见服务预设：选一下就自动填好地址和模型，省得用户查文档 */
+const PRESETS = {
+  deepseek: { baseUrl: 'https://api.deepseek.com/v1', model: 'deepseek-flash', key: 'https://platform.deepseek.com/api_keys' },
+  ollama: { baseUrl: 'http://127.0.0.1:11434/v1', model: 'qwen2.5:3b', key: '' },
+  lmstudio: { baseUrl: 'http://127.0.0.1:1234/v1', model: 'qwen2.5-7b-instruct', key: '' },
+  siliconflow: { baseUrl: 'https://api.siliconflow.cn/v1', model: 'Qwen/Qwen2.5-7B-Instruct', key: 'https://cloud.siliconflow.cn/account/ak' },
+  openrouter: { baseUrl: 'https://openrouter.ai/api/v1', model: 'qwen/qwen-2.5-7b-instruct:free', key: 'https://openrouter.ai/keys' },
+};
+
+$('#setPreset').addEventListener('change', (e) => {
+  const p = PRESETS[e.target.value];
+  if (!p) return;
+  $('#setBase').value = p.baseUrl;
+  $('#setModel').value = p.model;
+  $('#setKeyHint').textContent = p.key
+    ? `到 ${p.key} 申请 Key，粘贴到上面。`
+    : '本机服务不需要 Key，直接保存即可。';
+});
+
+// 主题下拉即改即生效
+$('#setTheme').addEventListener('change', (e) => {
+  applyTheme(e.target.value);
+  api.saveSettings({ theme: e.target.value }).catch(() => {});
+});
 
 /* ==================== 面板折叠（侧栏 / 列表 / 信息栏） ==================== */
 
@@ -506,7 +775,11 @@ $('#settingsClose').addEventListener('click', () => { $('#settingsModal').hidden
 $('#settingsModal').addEventListener('click', (e) => { if (e.target.id === 'settingsModal') $('#settingsModal').hidden = true; });
 
 $('#btnSaveSettings').addEventListener('click', async () => {
-  const patch = { model: $('#setModel').value, baseUrl: $('#setBase').value.trim() };
+  const patch = {
+    model: $('#setModel').value.trim() || 'deepseek-flash',
+    baseUrl: $('#setBase').value.trim(),
+    theme: $('#setTheme').value,
+  };
   const key = $('#setKey').value.trim();
   if (key) patch.apiKey = key;
 
@@ -516,6 +789,8 @@ $('#btnSaveSettings').addEventListener('click', async () => {
     $('#setKey').placeholder = state.settings.ai.hasKey
       ? `${state.settings.ai.keyMasked}（留空不修改）`
       : 'sk-...';
+    applyTheme($('#setTheme').value);
+    $('#testResult').hidden = true;
     toast('设置已保存');
   } catch (err) {
     toast(err.message);
@@ -922,6 +1197,11 @@ reader.onToolbarClick(async ({ type, color, sel }) => {
     return;
   }
 
+  if (type === 'translate') {
+    translateSelection(sel);
+    return;
+  }
+
   if (type === 'quote') {
     try {
       const r = await api.appendNote(state.selectedId, `> ${sel.quote}\n\n—— 第 ${sel.page} 页`);
@@ -979,12 +1259,32 @@ function initPanels() {
 /* ==================== 键盘 ==================== */
 
 document.addEventListener('keydown', (e) => {
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+  const mod = e.ctrlKey || e.metaKey;
+
+  if (mod && e.key.toLowerCase() === 'k') {
     e.preventDefault();
     $('#q').focus();
     $('#q').select();
+    return;
   }
+
+  // Ctrl+F：在 PDF 里查找（编辑器类应用里这是肌肉记忆）
+  if (mod && e.key.toLowerCase() === 'f') {
+    e.preventDefault();
+    openFind();
+    return;
+  }
+
+  if (mod && e.shiftKey && e.key.toLowerCase() === 'l') {
+    e.preventDefault();
+    toggleTheme();
+    return;
+  }
+
   if (e.key === 'Escape') {
+    if (!$('#trPop').hidden) { closeTrans(); return; }
+    if (!$('#pdfFind').hidden) { closeFind(); return; }
+    if (!$('#citeModal').hidden) { $('#citeModal').hidden = true; return; }
     if (!$('#boardOverlay').hidden) { board.close(); return; }
     if (!$('#addModal').hidden) { closeAddModal(); return; }
     if (!$('#editModal').hidden) { closeEditModal(); return; }
@@ -1001,6 +1301,14 @@ async function boot() {
   const b = await api.bootstrap();
   state.collections = b.collections;
   state.settings = b.settings;
+
+  // 主题：本地存过就用本地的（切换会即时生效），否则用后端设置，再否则跟随系统
+  let theme = b.settings?.ui?.theme;
+  try {
+    theme = localStorage.getItem('pd.theme') || theme;
+  } catch { /* 隐私模式忽略 */ }
+  if (!theme) theme = window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  applyTheme(theme);
   $('#sort').value = state.sort;
 
   renderStats(b.stats);

@@ -5,13 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>溪声轩斋</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-<!-- 先于样式恢复三块面板的折叠状态，避免打开瞬间闪一下 -->
+<!-- 先于样式恢复三块面板的折叠状态与夜间模式，避免打开瞬间闪一下 -->
 <script>
   try {
     const map = { sideCollapsed: 'side-collapsed', listCollapsed: 'list-collapsed', headCollapsed: 'head-collapsed' };
     for (const [key, cls] of Object.entries(map)) {
       if (localStorage.getItem('pd.' + key) === '1') document.documentElement.classList.add(cls);
     }
+    if (localStorage.getItem('pd.theme') === 'dark') document.documentElement.classList.add('dark');
   } catch (e) {}
 </script>
 <link rel="stylesheet" href="/style.css" />
@@ -21,7 +22,7 @@
     <div class="brand">
       <span class="dot"></span>
       <span class="brand-name">溪声轩斋</span>
-      <span class="badge">v0.5.3</span>
+      <span class="badge">v0.7.0</span>
     </div>
     <div class="view-toggles" id="viewToggles" title="三块面板可分别收起">
       <button class="vt-btn on" data-toggle="side">侧栏</button>
@@ -33,6 +34,7 @@
     </div>
     <button id="btnBoard" class="btn ghost topbar-btn" title="打开文献拼图">拼图</button>
     <div class="stats" id="stats"></div>
+    <button id="btnTheme" class="icon-btn" title="夜间模式（Ctrl+Shift+L）">◐</button>
     <button id="btnSettings" class="icon-btn gear" title="设置">⚙</button>
   </header>
 
@@ -92,6 +94,7 @@
           <div class="head-top">
             <h1 id="pTitle"></h1>
             <div class="head-actions">
+              <button id="btnCite" class="btn ghost" title="复制引文 / 导出 BibTeX">引用</button>
               <button id="btnNotes" class="btn ghost" title="显示 / 隐藏笔记栏">笔记</button>
               <button id="btnToggleHead" class="icon-btn head-toggle" title="收起 / 展开文献信息">▾</button>
             </div>
@@ -118,12 +121,21 @@
           <div class="pdf-box">
             <div id="pdfEmpty" class="pdf-empty" hidden>这篇没有 PDF 附件</div>
             <div id="pdfHost" class="pdf-host"></div>
+            <div class="pdf-find" id="pdfFind" hidden>
+              <input id="findInput" type="search" placeholder="在 PDF 里查找…" autocomplete="off" spellcheck="false" />
+              <span class="find-count" id="findCount"></span>
+              <button id="findPrev" class="pdf-btn" title="上一个（Shift+Enter）">↑</button>
+              <button id="findNext" class="pdf-btn" title="下一个（Enter）">↓</button>
+              <button id="findClose" class="pdf-btn" title="关闭（Esc）">×</button>
+            </div>
             <div class="pdf-bar">
               <button id="zoomOut" class="pdf-btn" title="缩小">−</button>
               <span id="zoomLevel" class="pdf-zoom">115%</span>
               <button id="zoomIn" class="pdf-btn" title="放大">＋</button>
               <span class="pdf-sep"></span>
               <span id="pageInfo" class="pdf-pageinfo"></span>
+              <span class="pdf-sep"></span>
+              <button id="btnFind" class="pdf-btn" title="在 PDF 里查找（Ctrl+F）">查找</button>
             </div>
           </div>
           <div class="splitter" id="splitter" title="拖动调整宽度"></div>
@@ -271,23 +283,66 @@
     </div>
   </div>
 
+  <!-- 引文：BibTeX / GB/T 7714 / RIS -->
+  <div class="modal" id="citeModal" hidden>
+    <div class="modal-card wide">
+      <div class="modal-head"><span>引用这篇文献</span><button class="icon-btn" id="citeClose">×</button></div>
+      <div class="modal-body settings">
+        <div class="tabs" id="citeTabs">
+          <button class="tab on" data-style="bibtex">BibTeX</button>
+          <button class="tab" data-style="gb">GB/T 7714</button>
+          <button class="tab" data-style="ris">RIS</button>
+        </div>
+        <p class="hint" id="citeHint"></p>
+        <textarea id="citeText" class="cite-text" readonly spellcheck="false"></textarea>
+        <div class="settings-actions">
+          <button id="btnCiteCopy" class="btn">复制</button>
+          <button id="btnCiteDownload" class="btn ghost">保存为文件</button>
+        </div>
+        <p class="hint">BibTeX 可直接粘进 Zotero / Overleaf；GB/T 7714 用于中文期刊投稿；RIS 可导入 EndNote、Mendeley。</p>
+      </div>
+    </div>
+  </div>
+
   <!-- 设置 -->
   <div class="modal" id="settingsModal" hidden>
     <div class="modal-card wide">
       <div class="modal-head"><span>设置</span><button class="icon-btn" id="settingsClose">×</button></div>
       <div class="modal-body settings">
-        <label for="setKey">DeepSeek API Key</label>
+        <label for="setPreset">服务预设</label>
+        <select id="setPreset">
+          <option value="">— 选择后自动填地址与模型 —</option>
+          <option value="deepseek">DeepSeek（云端，需 Key）</option>
+          <option value="ollama">Ollama 本机（免费，无需 Key）</option>
+          <option value="lmstudio">LM Studio 本机（免费，无需 Key）</option>
+          <option value="siliconflow">硅基流动（云端，注册送额度）</option>
+          <option value="openrouter">OpenRouter（云端，有免费模型）</option>
+        </select>
+
+        <label for="setKey">API Key</label>
         <input id="setKey" type="password" autocomplete="off" placeholder="sk-..." />
         <p class="hint" id="setKeyHint"></p>
 
         <label for="setModel">模型</label>
-        <select id="setModel">
-          <option value="deepseek-flash">deepseek-flash · 快且便宜（推荐）</option>
-          <option value="deepseek-v4-pro">deepseek-v4-pro · 更强更贵</option>
-        </select>
+        <input id="setModel" type="text" list="modelList" spellcheck="false" placeholder="deepseek-flash 或 qwen2.5:3b" />
+        <datalist id="modelList">
+          <option value="deepseek-flash"></option>
+          <option value="deepseek-v4-pro"></option>
+          <option value="qwen2.5:3b"></option>
+          <option value="qwen2.5:7b"></option>
+          <option value="qwen2.5:14b"></option>
+          <option value="Qwen/Qwen2.5-7B-Instruct"></option>
+        </datalist>
 
         <label for="setBase">API Base URL</label>
         <input id="setBase" type="text" spellcheck="false" />
+        <p class="hint">地址填 <code>http://127.0.0.1:11434/v1</code> 这类本机服务时，Key 可以留空。</p>
+
+        <label for="setTheme">界面主题</label>
+        <select id="setTheme">
+          <option value="light">浅色</option>
+          <option value="dark">夜间</option>
+        </select>
 
         <div class="settings-actions">
           <button id="btnTest" class="btn ghost">测试连接</button>
@@ -298,7 +353,8 @@
         <hr />
         <p class="hint">
           Key 只存在本机 <code>data/app.db</code>，不会上传到任何地方。<br />
-          环境变量 <code>DEEPSEEK_API_KEY</code> 优先级更高，可覆盖这里的配置。
+          环境变量 <code>DEEPSEEK_API_KEY</code> 优先级更高，可覆盖这里的配置。<br />
+          换成本机模型（Ollama）后，「AI 摘要」「划词翻译」都走本机，不花钱也不联外网。
         </p>
       </div>
     </div>
@@ -316,6 +372,24 @@
         <button id="dlgCancel" class="btn ghost">取消</button>
         <button id="dlgOk" class="btn">确定</button>
       </div>
+    </div>
+  </div>
+
+  <div id="trPop" class="tr-pop" hidden>
+    <div class="tr-head">
+      <span id="trTitle">翻译</span>
+      <button class="icon-btn" id="trClose" title="关闭">×</button>
+    </div>
+    <div class="tr-src" id="trSrc"></div>
+    <div class="tr-body" id="trBody"></div>
+    <div class="tr-actions">
+      <div class="tr-langs">
+        <button class="tr-lang on" data-target="zh">中</button>
+        <button class="tr-lang" data-target="en">EN</button>
+        <button class="tr-lang" data-target="ja">日</button>
+        <button class="tr-lang" data-target="original">原文</button>
+      </div>
+      <button class="btn ghost" id="trCopy">复制译文</button>
     </div>
   </div>
 

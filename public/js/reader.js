@@ -23,6 +23,12 @@ let handlersAttached = false;
 let autoFit = true;
 let resizeObserver = null;
 let resizeTimer = null;
+let startPage = 1;
+// 查找：每页的扁平文本与字符坐标，按需计算、缩放后失效
+let findCache = new Map();
+let findHits = [];
+let findIndex = 0;
+let findQuery = '';
 
 async function ensureLib() {
   if (lib) return lib;
@@ -46,6 +52,7 @@ export async function open(id, hostEl, opts = {}) {
   host = hostEl;
   onPageChange = opts.onPageChange || (() => {});
   autoFit = true;
+  startPage = Math.max(1, Number(opts.startPage) || 1);
 
   host.innerHTML = '';
   host.classList.add('pdf-host-loading');
@@ -61,7 +68,12 @@ export async function open(id, hostEl, opts = {}) {
     if (!handlersAttached) { attachSelectionHandlers(); handlersAttached = true; }
     watchResize();
     syncZoomLabel();
-    return { numPages: doc.numPages };
+    // 续读：跳回上次停下的那一页（页面还没渲染也能跳，用的是占位高度）
+    if (startPage > 1) {
+      jumpToPage(startPage, false);
+      setPageInfo(startPage, doc.numPages);
+    }
+    return { numPages: doc.numPages, startPage };
   } catch (err) {
     console.error('[reader] pdf.js 失败，回退到内置阅读器：', err);
     fallbackToIframe(id);
@@ -107,6 +119,10 @@ export function close() {
   annotations = [];
   paperId = null;
   hideToolbar();
+  findCache.clear();
+  findHits = [];
+  findIndex = 0;
+  findQuery = '';
   if (host) host.innerHTML = '';
   setPageInfo(0, 0);
 }
@@ -125,6 +141,7 @@ function fallbackToIframe(id) {
 async function buildPages() {
   host.innerHTML = '';
   pageEls = [];
+  findCache.clear();
 
   const first = await doc.getPage(1);
   const baseView = first.getViewport({ scale });
@@ -138,6 +155,7 @@ async function buildPages() {
     el('div', 'pdf-canvas-wrap', pageEl);
     el('div', 'textLayer', pageEl).style.setProperty('--scale-factor', String(scale));
     el('div', 'hl-layer', pageEl);
+    el('div', 'find-layer', pageEl);
 
     pageEls.push(pageEl);
   }
@@ -207,6 +225,7 @@ async function renderPage(n) {
     await tl.render();
 
     paintHighlights(n);
+    paintFindHits(n);
   } catch (err) {
     console.error('[reader] 渲染第', n, '页失败', err);
   }
@@ -320,6 +339,7 @@ function showToolbar(anchor) {
     toolbar.innerHTML = `
       ${Object.keys(COLORS).map((c) => `<button class="sw" data-color="${c}" style="background:${COLORS[c]}" title="高亮"></button>`).join('')}
       <span class="tb-sep"></span>
+      <button class="tb-trans" title="翻译选中的句子">译</button>
       <button class="tb-quote" title="追加到笔记">引用到笔记</button>
     `;
   }
@@ -348,6 +368,8 @@ export function onToolbarClick(handler) {
 
     if (btn.dataset.color) {
       handler({ type: 'highlight', color: btn.dataset.color, sel: pendingSel });
+    } else if (btn.classList.contains('tb-trans')) {
+      handler({ type: 'translate', sel: pendingSel });
     } else if (btn.classList.contains('tb-quote')) {
       handler({ type: 'quote', sel: pendingSel });
     }
@@ -356,13 +378,18 @@ export function onToolbarClick(handler) {
 
 /* ---------------- 导航 ---------------- */
 
-export function jumpToPage(n) {
+export function jumpToPage(n, smooth = true) {
   const p = pageEls[n - 1];
-  if (p && host) host.scrollTo({ top: p.offsetTop - 8, behavior: 'smooth' });
+  if (!p || !host) return;
+  host.scrollTo({ top: p.offsetTop - 8, behavior: smooth ? 'smooth' : 'auto' });
 }
 
 export function currentScale() {
   return scale;
+}
+
+export function pageCount() {
+  return doc ? doc.numPages : 0;
 }
 
 export async function zoom(delta) {
@@ -395,4 +422,138 @@ function setZoomLabel() {
 
 export function syncZoomLabel() {
   setZoomLabel();
+}
+
+/* ---------------- 页内查找 ---------------- */
+//
+// 思路：把每页的文字按「字符」摊平成一条字符串，并记下每个字符在页面里的
+// 像素矩形（来自 pdf.js 的 textContent），搜索就是在字符串里 indexOf，
+// 命中后把对应字符的矩形画成色块。这样不依赖 pdf.js 的 findController，
+// 也不会动文本层的 DOM（动 DOM 会破坏 pdf.js 的定位）。
+
+async function pageText(n) {
+  if (findCache.has(n)) return findCache.get(n);
+  const job = (async () => {
+    const page = await doc.getPage(n);
+    const viewport = page.getViewport({ scale });
+    const tc = await page.getTextContent();
+    const chars = [];
+    for (const item of tc.items) {
+      if (typeof item.str !== 'string' || !item.str) continue;
+      const tx = lib.Util.transform(viewport.transform, item.transform);
+      const h = Math.hypot(tx[2], tx[3]) || 10;
+      const left = tx[4];
+      const top = tx[5] - h;
+      const len = item.str.length;
+      const total = item.width ? item.width * scale : h * 0.55 * len;
+      const cw = total / len;
+      for (let k = 0; k < len; k++) {
+        const ch = item.str[k];
+        if (/\s/.test(ch)) continue;
+        chars.push({ ch: ch.toLowerCase(), x: left + cw * k, y: top, w: Math.max(cw, 1), h });
+      }
+    }
+    return { chars, norm: chars.map((c) => c.ch).join('') };
+  })().catch(() => ({ chars: [], norm: '' }));
+  findCache.set(n, job);
+  return job;
+}
+
+function mergeRects(chars) {
+  const out = [];
+  for (const c of chars) {
+    const last = out[out.length - 1];
+    if (last && Math.abs(last.y - c.y) < 2 && Math.abs(last.x + last.w - c.x) < 3) {
+      last.w += c.w;
+    } else {
+      out.push({ x: c.x, y: c.y, w: c.w, h: c.h });
+    }
+  }
+  return out;
+}
+
+function paintFindHits(n) {
+  const pageEl = pageEls[n - 1];
+  if (!pageEl) return;
+  const layer = pageEl.querySelector('.find-layer');
+  if (!layer) return;
+  layer.innerHTML = '';
+  const mine = findHits.filter((h) => h.page === n);
+  if (!mine.length) return;
+
+  pageText(n).then(({ chars }) => {
+    if (!findHits.length || !layer.isConnected) return;
+    for (const hit of mine) {
+      const seg = chars.slice(hit.start, hit.end);
+      const isCurrent = findHits[findIndex] === hit;
+      for (const r of mergeRects(seg)) {
+        const d = el('div', isCurrent ? 'find-hit current' : 'find-hit', layer);
+        d.style.left = `${r.x}px`;
+        d.style.top = `${r.y}px`;
+        d.style.width = `${r.w}px`;
+        d.style.height = `${r.h}px`;
+      }
+    }
+    if (findHits[findIndex] && findHits[findIndex].page === n) {
+      const cur = layer.querySelector('.find-hit.current');
+      if (cur) cur.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  });
+}
+
+async function revealFindHit(i) {
+  const hit = findHits[i];
+  if (!hit) return null;
+  findIndex = i;
+  if (!rendered.has(hit.page)) await renderPage(hit.page);
+  if (host) {
+    const pageEl = pageEls[hit.page - 1];
+    if (pageEl && !pageEl.getBoundingClientRect().height) return null;
+    jumpToPage(hit.page, false);
+  }
+  paintFindHits(hit.page);
+  return findState();
+}
+
+export function findState() {
+  return { count: findHits.length, index: findHits.length ? findIndex + 1 : 0, query: findQuery };
+}
+
+export async function find(query) {
+  findQuery = String(query || '').trim();
+  findHits = [];
+  findIndex = 0;
+  for (const n of rendered) paintFindHits(n);
+  if (!findQuery || !doc) return findState();
+
+  const needle = findQuery.toLowerCase().replace(/\s+/g, '');
+  if (!needle) return findState();
+
+  for (let n = 1; n <= doc.numPages; n++) {
+    const { norm } = await pageText(n);
+    let from = 0;
+    for (;;) {
+      const at = norm.indexOf(needle, from);
+      if (at < 0) break;
+      findHits.push({ page: n, start: at, end: at + needle.length });
+      from = at + needle.length;
+    }
+  }
+  if (!findHits.length) return findState();
+  await revealFindHit(0);
+  return findState();
+}
+
+export async function findStep(delta) {
+  if (!findHits.length) return findState();
+  const next = (findIndex + delta + findHits.length) % findHits.length;
+  await revealFindHit(next);
+  return findState();
+}
+
+export function clearFind() {
+  findQuery = '';
+  findHits = [];
+  findIndex = 0;
+  for (const layer of host ? host.querySelectorAll('.find-layer') : []) layer.innerHTML = '';
 }

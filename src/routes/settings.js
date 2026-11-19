@@ -21,6 +21,8 @@ async function put(req, res) {
     if (u) patch['ai.baseUrl'] = u;
   }
   if ('noteWidth' in body) patch['ui.noteWidth'] = String(Math.max(240, Math.min(900, Number(body.noteWidth) || 380)));
+  // 主题只认两个值：拼错时退回浅色，别把界面弄成半黑半白
+  if ('theme' in body) patch['ui.theme'] = body.theme === 'dark' ? 'dark' : 'light';
 
   settings.update(patch);
   return sendJson(res, 200, settings.publicView());

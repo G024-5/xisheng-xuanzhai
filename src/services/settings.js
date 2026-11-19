@@ -7,6 +7,7 @@ const DEFAULTS = {
   'ai.model': 'deepseek-flash',
   'ai.baseUrl': 'https://api.deepseek.com',
   'ui.noteWidth': '380',
+  'ui.theme': 'light',
 };
 
 function get(key) {
@@ -32,20 +33,47 @@ const resolveApiKey = () => process.env.DEEPSEEK_API_KEY || get('ai.apiKey');
 const resolveBaseUrl = () => (process.env.DEEPSEEK_BASE || get('ai.baseUrl')).replace(/\/+$/, '');
 const resolveModel = () => process.env.DEEPSEEK_MODEL || get('ai.model');
 
+/**
+ * 本机端点（Ollama / LM Studio / vLLM / llama.cpp）不需要 Key。
+ * 只认回环地址：局域网里别人的模型服务仍当作「需要 Key」处理，免得误判成免鉴权。
+ */
+function isLocalEndpoint(url) {
+  try {
+    const u = new URL(String(url || ''));
+    return ['127.0.0.1', 'localhost', '0.0.0.0', '::1', '[::1]'].includes(u.hostname);
+  } catch {
+    return false;
+  }
+}
+
+/** 当前配置下 AI 能不能用：有 Key，或者指向本机端点 */
+const isReady = () => Boolean(resolveApiKey()) || isLocalEndpoint(resolveBaseUrl());
+
 function publicView() {
   const key = resolveApiKey();
+  const baseUrl = resolveBaseUrl();
+  const local = isLocalEndpoint(baseUrl);
   const all = {};
   for (const k of Object.keys(DEFAULTS)) all[k] = get(k);
   return {
     ai: {
       hasKey: Boolean(key),
+      /** 本机端点免 Key，界面据此把「Key」标成可留空 */
+      local,
+      ready: Boolean(key) || local,
       /** 只回显尾部 4 位，前端永不接触完整 Key */
       keyMasked: key ? `${key.slice(0, 3)}••••••${key.slice(-4)}` : '',
       model: resolveModel(),
-      baseUrl: resolveBaseUrl(),
+      baseUrl,
     },
-    ui: { noteWidth: Number(get('ui.noteWidth')) || 380 },
+    ui: {
+      noteWidth: Number(get('ui.noteWidth')) || 380,
+      theme: get('ui.theme') === 'dark' ? 'dark' : 'light',
+    },
   };
 }
 
-module.exports = { get, set, update, publicView, resolveApiKey, resolveBaseUrl, resolveModel, DEFAULTS };
+module.exports = {
+  get, set, update, publicView, isReady, isLocalEndpoint,
+  resolveApiKey, resolveBaseUrl, resolveModel, DEFAULTS,
+};

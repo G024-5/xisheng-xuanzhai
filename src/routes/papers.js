@@ -8,6 +8,7 @@ const { savePdfStream, isPdfFile } = require('../util/upload');
 const { createPaper, norm } = require('../services/ingest');
 const { extractPdfMeta, looksGarbled } = require('../services/pdfmeta');
 const { parseIdentifier, fetchArxiv, fetchDoi, downloadArxivPdf } = require('../services/metadata');
+const cite = require('../services/cite');
 
 /** 排序白名单：只允许这几个，避免 SQL 注入 */
 const SORTS = {
@@ -117,6 +118,10 @@ async function detail(req, res, params) {
     SELECT te.node_id, n.title FROM tree_entries te JOIN tree_nodes n ON n.id = te.node_id
     WHERE te.target_type = 'paper' AND te.target_id = ?
   `).all(String(id));
+
+  // 上次读到第几页：前端打开 PDF 后直接跳过去
+  paper.progress = db.prepare('SELECT page, page_count, updated_at FROM reading_progress WHERE paper_id = ?')
+    .get(id) || null;
 
   return sendJson(res, 200, paper);
 }
@@ -372,12 +377,83 @@ async function importByIdentifier(req, res) {
   return sendJson(res, 200, { ...result, hasPdf: Boolean(pdf), meta: { title: meta.title, year: meta.year } });
 }
 
+/* ---------------- 引文导出 ---------------- */
+
+function loadCitePaper(id) {
+  const p = db.prepare(`
+    SELECT id, title, year, venue, doi, url, abstract, item_type, arxiv_id
+    FROM papers WHERE id = ?
+  `).get(id);
+  if (!p) return null;
+  p.authors = db.prepare(`
+    SELECT a.name FROM paper_authors pa JOIN authors a ON a.id = pa.author_id
+    WHERE pa.paper_id = ? ORDER BY pa.position
+  `).all(id).map((r) => r.name);
+  return p;
+}
+
+/** GET /api/papers/:id/cite?style=bibtex|gb|ris */
+async function citeOne(req, res, params, url) {
+  const p = loadCitePaper(Number(params.id));
+  if (!p) return sendJson(res, 404, { error: '文献不存在' });
+  return sendJson(res, 200, cite.formatOne(p, url.searchParams.get('style') || 'bibtex'));
+}
+
+/** GET /api/cite?ids=1,2,3&style=... —— 批量导出，前端按当前筛选结果一次带走 */
+async function citeMany(req, res, _params, url) {
+  const ids = String(url.searchParams.get('ids') || '')
+    .split(',')
+    .map(Number)
+    .filter((n) => Number.isInteger(n) && n > 0)
+    .slice(0, 200);
+
+  if (!ids.length) return sendJson(res, 400, { error: '没有指定要导出的文献' });
+
+  const papers = ids.map(loadCitePaper).filter(Boolean);
+  if (!papers.length) return sendJson(res, 404, { error: '没有找到可导出的文献' });
+
+  return sendJson(res, 200, cite.formatMany(papers, url.searchParams.get('style') || 'bibtex'));
+}
+
+/* ---------------- 阅读进度 ---------------- */
+
+async function getProgress(req, res, params) {
+  const row = db.prepare('SELECT page, page_count, updated_at FROM reading_progress WHERE paper_id = ?')
+    .get(Number(params.id));
+  return sendJson(res, 200, row || { page: 1, page_count: null, updated_at: null });
+}
+
+async function putProgress(req, res, params) {
+  const id = Number(params.id);
+  if (!db.prepare('SELECT 1 FROM papers WHERE id = ?').get(id)) {
+    return sendJson(res, 404, { error: '文献不存在' });
+  }
+
+  const body = await readBody(req);
+  const page = Math.max(1, Math.min(100000, Number(body.page) || 1));
+  const pageCount = body.pageCount ? Math.max(1, Math.min(100000, Number(body.pageCount))) : null;
+
+  db.prepare(`
+    INSERT INTO reading_progress (paper_id, page, page_count, updated_at) VALUES (?, ?, ?, datetime('now'))
+    ON CONFLICT(paper_id) DO UPDATE SET
+      page = excluded.page,
+      page_count = COALESCE(excluded.page_count, reading_progress.page_count),
+      updated_at = datetime('now')
+  `).run(id, page, pageCount);
+
+  return sendJson(res, 200, { ok: true, page });
+}
+
 module.exports = function register(add) {
   add('GET', '/api/papers', list);
   add('GET', '/api/papers/:id', detail);
   add('PATCH', '/api/papers/:id', patch);
   add('DELETE', '/api/papers/:id', remove);
   add('GET', '/api/papers/:id/file', file);
+  add('GET', '/api/papers/:id/cite', citeOne);
+  add('GET', '/api/cite', citeMany);
+  add('GET', '/api/papers/:id/progress', getProgress);
+  add('PUT', '/api/papers/:id/progress', putProgress);
   add('POST', '/api/uploads', upload);
   add('POST', '/api/papers', create);
   add('POST', '/api/papers/import', importByIdentifier);

@@ -114,6 +114,19 @@ const send = async (p, method, body) => {
   const annAfter = (await get('/api/papers/15/annotations')).body;
   ok('删除标注', !annAfter.items.some((a) => a.id === ann.body.id));
 
+  /* ---------- 引文与阅读进度（只读，不改数据）---------- */
+  const bib = await get('/api/papers/15/cite?style=bibtex');
+  ok('引文 BibTeX', bib.status === 200 && String(bib.body.text).startsWith('@'), String(bib.body.text).slice(0, 36));
+  const gbCite = await get('/api/papers/15/cite?style=gb');
+  ok('引文 GB/T 7714', gbCite.status === 200 && String(gbCite.body.text).includes('['));
+  const risCite = await get('/api/papers/15/cite?style=ris');
+  ok('引文 RIS', risCite.status === 200 && String(risCite.body.text).startsWith('TY  -'));
+  const prog = await get('/api/papers/15/progress');
+  ok('阅读进度可读', prog.status === 200 && Number(prog.body.page) >= 1, `page=${prog.body.page}`);
+
+  /* ---------- 夜间模式样式 ---------- */
+  ok('CSS 含夜间变量', css.includes('html.dark {') && css.includes('--accent: #46c79b'));
+
   /* ---------- pdf.js 静态资源 ---------- */
   for (const p of ['/vendor/pdfjs/pdf.min.mjs', '/vendor/pdfjs/pdf.worker.min.mjs']) {
     const r = await get(p);

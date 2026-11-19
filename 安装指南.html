@@ -89,15 +89,21 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 36px 0; }
 <ol><li>点左上角列表标题旁的 <strong>＋</strong>，或直接把 PDF <strong>拖进窗口</strong></li><li>选择 PDF 文件</li><li>程序会自动识别标题和作者，<strong>请核对</strong>，不对就直接改</li><li>点「添加到文库」</li></ol>
 <p>也可以粘贴 DOI 或 arXiv 号（如 <code>2301.12345</code>）自动抓取，arXiv 还会顺带下载 PDF。</p>
 <h3>阅读与笔记</h3>
-<ul><li>中间列表点一篇文献，右侧显示 PDF</li><li>在 PDF 里<strong>选中文字</strong>，会浮出四色高亮按钮，点一下就标好了</li><li>右下角「笔记」栏可以直接写，自动保存</li><li>顶部「侧栏 / 列表 / 信息」三个按钮可以收起对应面板，PDF 会跟着变大</li></ul>
+<ul><li>中间列表点一篇文献，右侧显示 PDF</li><li>在 PDF 里<strong>选中文字</strong>，会浮出四色高亮按钮，点一下就标好了</li><li>选中的文字还可以点「译」当场翻译，点「引」把原文和译文一起写进笔记</li><li>右下角「笔记」栏可以直接写，自动保存</li><li>顶部「侧栏 / 列表 / 信息」三个按钮可以收起对应面板，PDF 会跟着变大</li></ul>
+<h3>四个常用小功能</h3>
+<ul><li><strong>查找</strong>：在 PDF 里按 <code>Ctrl+F</code>，输入关键词，回车跳下一条，<code>Esc</code> 关闭</li><li><strong>继续读</strong>：关掉再打开会自动回到上次那一页；顶栏会提示「上次读到第 N 页」</li><li><strong>夜间模式</strong>：点顶栏的月亮/太阳图标；也可以在 ⚙ 里选</li><li><strong>引文</strong>：详情页顶部「引文」→ 选 BibTeX / GB/T 7714 / RIS → 复制</li></ul>
 <h3>文献拼图</h3>
 <p>点顶部「拼图」：</p>
 <ol><li>「＋ 拼图」新建一张画布</li><li>「＋ 文献卡」添加一张卡，在右侧选文献、写「问题 / 方案 / 局限」</li><li>拖动卡片摆位置；点卡片右下角小圆点，再点另一张卡，就能连线</li><li>可以给卡片选颜色、归入支链</li></ol>
 <hr />
-<h2>六、可选：接入 AI 摘要</h2>
-<p>不配置也能正常用，只是没有「AI 摘要」按钮。</p>
-<ol><li>打开 <a href="https://platform.deepseek.com" target="_blank" rel="noreferrer">https://platform.deepseek.com</a> 注册并登录</li><li>左侧「API Keys」→ 创建，复制那串 <code>sk-</code> 开头的密钥</li><li>回到应用，点右上角 <strong>⚙</strong></li><li>粘贴密钥 → 点「测试连接」→ 显示正常后点「保存」</li></ol>
-<p>成本：每篇论文约 ¥0.02（读全文生成四段摘要）。</p>
+<h2>六、可选：接入 AI（摘要与翻译）</h2>
+<p>不配置也能正常用，只是没有「AI 摘要」和「译」按钮。两条路，任选一条。</p>
+<h3>路线 A：云端，几分钟搞定（推荐新手）</h3>
+<ol><li>打开 <a href="https://platform.deepseek.com" target="_blank" rel="noreferrer">https://platform.deepseek.com</a> 注册并登录</li><li>左侧「API Keys」→ 创建，复制那串 <code>sk-</code> 开头的密钥</li><li>回到应用，点右上角 <strong>⚙</strong>，服务预设选「DeepSeek」</li><li>粘贴密钥 → 点「测试连接」→ 显示正常后点「保存」</li></ol>
+<p>成本：每篇论文约 ¥0.02（读全文生成四段摘要）。 不想花钱的话，预设里选「硅基流动」，注册送额度，模型填 <code>Qwen/Qwen2.5-7B-Instruct</code>。</p>
+<h3>路线 B：本机免费（不联网、不花钱，但慢）</h3>
+<ol><li>打开 <a href="https://ollama.com/download" target="_blank" rel="noreferrer">https://ollama.com/download</a> 下载 Windows 版并安装</li><li>打开「命令提示符」，运行 <code>ollama pull qwen2.5:3b</code>（约 2 GB，一次就好）</li><li>回到应用 ⚙，服务预设选「Ollama 本机」</li><li><strong>Key 留空</strong>，点「测试连接」→ 保存</li></ol>
+<p>第一次跑会慢（笔记本 CPU 上生成一篇摘要大概 1–3 分钟），之后就正常了。 电脑内存 8 GB 选 <code>qwen2.5:3b</code>，16 GB 以上可以试 <code>qwen2.5:7b</code>，效果更好。</p>
 <p>密钥只保存在你自己电脑的 <code>data\app.db</code> 里，不会上传到别处。</p>
 <hr />
 <h2>七、数据在哪、怎么备份</h2>
