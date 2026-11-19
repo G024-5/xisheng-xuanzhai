@@ -179,7 +179,9 @@ function gbEntry(paper) {
   const venue = String(paper.venue || '').trim();
   const arxiv = paper.arxiv_id || (String(paper.doi || '').match(/arxiv\.(.+)/i) || [])[1];
 
-  let text = `${authors}. ${title}[${marker}]`;
+  // 作者串本身可能已以「et al.」结尾，此时不能再补一个句点，否则出现「et al..」
+  const dot = /[.．]$/.test(authors) ? '' : '.';
+  let text = `${authors}${dot} ${title}[${marker}]`;
 
   if (marker === 'C') {
     if (venue) text += `//${venue}`;
